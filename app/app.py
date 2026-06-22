@@ -1,8 +1,13 @@
-import os
 import time
+import uuid
 import json
+import logging   # 👈 ADD THIS LINE
 import psycopg2
-from flask import Flask, jsonify, request
+from flask  import g
+from flask import Flask, request, jsonify
+
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
 
 app = Flask(__name__)
 
@@ -17,10 +22,25 @@ def log(event: dict):
 # Middleware: Request ID
 # -------------------------
 @app.before_request
-def before_request():
-    request.request_id = request.headers.get("X-Request-ID", "unknown")
-    request.start_time = time.time()
+def start_request():
+    g.start_time = time.time()
+    g.request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
 
+@app.after_request
+def log_request(response):
+    latency = round((time.time() - g.start_time) * 1000, 2)
+
+    log_data = {
+        "request_id": g.request_id,
+        "method": request.method,
+        "path": request.path,
+        "status": response.status_code,
+        "latency_ms": latency
+    }
+
+    print(json.dumps(log_data))
+
+    return response
 
 # -------------------------
 # Root Endpoint
@@ -30,11 +50,11 @@ def home():
     response = "OK"
 
     log({
-        "request_id": request.request_id,
+	"request_id": g.request_id,
         "path": "/",
         "method": request.method,
         "status": 200,
-        "latency_ms": round((time.time() - request.start_time) * 1000, 2)
+        "latency_ms": round((time.time() - g.start_time) * 1000, 2)
     })
 
     return response
@@ -70,11 +90,11 @@ def db():
         conn.close()
 
         log({
-            "request_id": request.request_id,
+            "request_id": g.request_id,
             "path": "/db",
             "method": request.method,
             "status": 200,
-            "latency_ms": round((time.time() - request.start_time) * 1000, 2)
+            "latency_ms": round((time.time() - g.start_time) * 1000, 2)
         })
 
         return jsonify({
@@ -84,12 +104,12 @@ def db():
     except Exception as e:
 
         log({
-            "request_id": request.request_id,
+            "request_id": g.request_id,
             "path": "/db",
             "method": request.method,
             "status": 500,
             "error": str(e),
-            "latency_ms": round((time.time() - request.start_time) * 1000, 2)
+            "latency_ms": round((time.time() - g.start_time) * 1000, 2)
         })
 
         return jsonify({"error": str(e)}), 500
