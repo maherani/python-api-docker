@@ -57,3 +57,35 @@ Flask API remains internal.
 PostgreSQL remains internal.
 
 This design reduces attack surface and follows production best practices.
+#-------------------------------------1405/04/01------------------------
+# System Architecture
+
+## Components
+
+### 1. Nginx (Reverse Proxy)
+- Handles all incoming traffic
+- Routes requests to Flask API
+- Exposes port 80
+
+### 2. API (Flask)
+- Runs on port 5000 (internal)
+- Handles:
+  - /health
+  - /db
+  - /metrics
+- Adds:
+  - request_id
+  - latency tracking
+
+### 3. PostgreSQL
+- Persistent database
+- Internal Docker network only
+
+### 4. Monitoring
+- Prometheus collects metrics
+- Grafana visualizes dashboards
+
+## Network
+
+All services communicate via:
+app_network (Docker bridge)

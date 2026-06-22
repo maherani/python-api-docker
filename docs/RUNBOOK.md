@@ -1,106 +1,147 @@
-# Operations Runbook
+# SRE RUNBOOK — Python API Platform
 
-## Verify Containers
+ 1. Service Overview
 
+This system is a production-like Docker-based platform including:
+
+- Flask API
+- PostgreSQL Database
+- Nginx Reverse Proxy
+- Prometheus (metrics)
+- Grafana (visualization)
+
+ 2. Architecture
+
+Client → Nginx → Flask API → PostgreSQL  
+                 ↓  
+          Prometheus → Grafana
+
+ 3. Start System
+
+```bash
+docker-compose up --build -d
+
+
+4. Verify System
 docker-compose ps
 
 Expected:
 
-* nginx_proxy -> Up
-* python_api -> Up (healthy)
-* postgres -> Up (healthy)
+nginx_proxy → Up
+python_api → Up (healthy)
+db → Up (healthy)
+prometheus → Up
+grafana → Up
 
----
-
-## Check Logs
-
-Application:
-
-docker logs python_api --tail 100
-
-Nginx:
-
-docker logs nginx_proxy --tail 100
-
-Database:
-
-docker logs python-api-docker_db_1 --tail 100
-
----
-
-## Test Endpoints
-
-Health:
-
+5. Health Check
 curl http://localhost/health
 
-Database:
+Expected response:
 
-curl http://localhost/db
+{
+  "status": "ok",
+  "request_id": "uuid"
+}
 
----
+6. API Endpoints
+GET / → Main API
+GET /health → Health check
+GET /db → Database test
+GET /metrics → Prometheus metrics
 
-## Common Problems
+7. Logs
+API logs
+docker logs python_api --tail 100
+Nginx logs
+docker logs nginx_proxy --tail 100
+Database logs
+docker logs db --tail 100
 
-### 500 Internal Server Error
+8. Common Issues
+502 Bad Gateway
 
-Check:
+Cause:
 
-docker logs python_api
+API is down
+Nginx cannot reach upstream
 
-Common causes:
+Fix:
 
-* Python exception
-* Missing imports
-* Database connection failure
-
----
-
-### Nginx 502 Bad Gateway
-
-Check:
-
-docker ps
-
-Verify:
-
-* python_api is running
-* nginx.conf upstream name is correct
-
----
-
-### Database Connection Failure
-
-Verify:
-
-* PostgreSQL container is healthy
-* Environment variables are correct
-
----
-
-### Container Restart Loop
+docker restart nginx_proxy
+docker logs nginx_proxy
 
 Check:
+proxy_pass must be http://api:5000
 
-docker logs python_api
+API Crash / Restart Loop
 
-Most restart loops are caused by application startup errors.
+Check logs:
 
----
+docker logs python_api --tail 200
 
-## Recovery Procedure
+Possible causes:
 
-1. Pull latest code
-2. Rebuild containers
+missing dependency
+Python runtime error
+missing middleware (request_id / start_time)
+Database Connection Issues
+docker exec -it db psql -U app -d app
 
+9. Metrics
+curl http://localhost/metrics
+
+10. Shutdown System
 docker-compose down
+
+11. Full Reset (Clean State)
+docker-compose down -v
 docker-compose up --build -d
 
-3. Verify health
+12. Network Architecture
 
-docker-compose ps
+All services communicate via:
 
-4. Test endpoints
+app_network (Docker bridge)
+
+Internal routing:
+
+nginx → api:5000
+api → db:5432
+
+13. Security Notes
+Never commit secrets (tokens, passwords)
+Use .gitignore for sensitive files
+Database is not exposed externally
+nginx is the only public entry point
+
+14. Deployment Flow
+Code change
+Update documentation
+Commit changes
+Push to Git
+Rebuild system
+docker-compose up --build -d
+
+15. Onboarding
+git clone <repo>
+cd python-api-docker
+docker-compose up --build -d
+
+Test:
 
 curl http://localhost/health
-curl http://localhost/db
+
+16. System Summary
+
+This platform provides:
+
+Stable API service
+Database persistence
+Reverse proxy routing
+Observability stack (metrics + dashboards)
+
+Designed to be:
+
+reproducible
+debuggable
+production-ready

@@ -2,81 +2,66 @@ version: "3.9"
 
 services:
 
-  nginx:
-    image: nginx:alpine
-    container_name: nginx_proxy
-
-    ports:
-      - "80:80"
-
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - nginx_logs:/var/log/nginx
-
-    depends_on:
-      - api
-
-    restart: unless-stopped
-
-    networks:
-      - appnet
-
   api:
     build: .
-
-    container_name: python_api
-
-    expose:
-      - "5000"
-
-    environment:
-      DB_HOST: ${DB_HOST}
-      DB_NAME: ${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASS: ${DB_PASS}
-
-    depends_on:
-      db:
-        condition: service_healthy
-
+    container_name: api
     restart: unless-stopped
-
+    environment:
+      - DB_HOST=db
+      - DB_NAME=app
+      - DB_USER=app
+      - DB_PASSWORD=app
+    depends_on:
+      - db
     networks:
-      - appnet
-
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-      start_period: 10s
+      - app_network
 
   db:
     image: postgres:16
-
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: pass
-      POSTGRES_DB: testdb
-
+    container_name: db
     restart: unless-stopped
-
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
     volumes:
-      - pgdata:/var/lib/postgresql/data
-
+      - db_data:/var/lib/postgresql/data
     networks:
-      - appnet
+      - app_network
 
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+  nginx:
+    image: nginx:alpine
+    container_name: nginx_proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      - api
+    networks:
+      - app_network
 
-networks:
-  appnet:
-    driver: bridge
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - app_network
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - app_network
 
 volumes:
-  pgdata:
-  nginx_logs:
+  db_data:
+
+networks:
+  app_network:
+    driver: bridge

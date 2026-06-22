@@ -1,122 +1,82 @@
 import time
 import uuid
-import json
-import logging   # 👈 ADD THIS LINE
-import psycopg2
-from flask  import g
-from flask import Flask, request, jsonify
-
-log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR)
+from flask import Flask, request, jsonify, g
 
 app = Flask(__name__)
 
 # -------------------------
-# JSON Logger
-# -------------------------
-def log(event: dict):
-    print(json.dumps(event), flush=True)
-
-
-# -------------------------
-# Middleware: Request ID
+# Middleware
 # -------------------------
 @app.before_request
-def start_request():
+def before_request():
+    g.request_id = str(uuid.uuid4())
     g.start_time = time.time()
-    g.request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
-
-@app.after_request
-def log_request(response):
-    latency = round((time.time() - g.start_time) * 1000, 2)
-
-    log_data = {
-        "request_id": g.request_id,
-        "method": request.method,
-        "path": request.path,
-        "status": response.status_code,
-        "latency_ms": latency
-    }
-
-    print(json.dumps(log_data))
-
-    return response
 
 # -------------------------
-# Root Endpoint
-# -------------------------
-@app.route("/")
-def home():
-    response = "OK"
-
-    log({
-	"request_id": g.request_id,
-        "path": "/",
-        "method": request.method,
-        "status": 200,
-        "latency_ms": round((time.time() - g.start_time) * 1000, 2)
-    })
-
-    return response
-
-
-# -------------------------
-# Health Endpoint
+# Health
 # -------------------------
 @app.route("/health")
 def health():
-    return jsonify({"status": "ok"})
-
+    return jsonify({
+        "status": "ok",
+        "request_id": g.request_id
+    })
 
 # -------------------------
-# DB Endpoint
+# Home
+# -------------------------
+@app.route("/")
+def home():
+    return jsonify({
+        "message": "API is running",
+        "request_id": g.request_id,
+        "latency_ms": round((time.time() - g.start_time) * 1000, 2)
+    })
+
+# -------------------------
+# DB (safe version)
 # -------------------------
 @app.route("/db")
 def db():
-
     try:
+        import psycopg2
+
         conn = psycopg2.connect(
-            host=os.getenv("DB_HOST"),
-            database=os.getenv("DB_NAME"),
-            user=os.getenv("DB_USER"),
-            password=os.getenv("DB_PASS")
+            host="db",
+            database="app",
+            user="app",
+            password="app"
         )
 
         cur = conn.cursor()
-        cur.execute("SELECT version();")
-        version = cur.fetchone()
+        cur.execute("SELECT 1;")
+        result = cur.fetchone()
 
         cur.close()
         conn.close()
 
-        log({
-            "request_id": g.request_id,
-            "path": "/db",
-            "method": request.method,
-            "status": 200,
-            "latency_ms": round((time.time() - g.start_time) * 1000, 2)
-        })
-
         return jsonify({
-            "postgres": version[0]
+            "db": "ok",
+            "result": result,
+            "request_id": g.request_id,
+            "latency_ms": round((time.time() - g.start_time) * 1000, 2)
         })
 
     except Exception as e:
-
-        log({
-            "request_id": g.request_id,
-            "path": "/db",
-            "method": request.method,
-            "status": 500,
+        return jsonify({
+            "db": "error",
             "error": str(e),
-            "latency_ms": round((time.time() - g.start_time) * 1000, 2)
-        })
-
-        return jsonify({"error": str(e)}), 500
-
+            "request_id": g.request_id
+        }), 500
 
 # -------------------------
-# Main
+# Metrics (simple placeholder)
 # -------------------------
+@app.route("/metrics")
+def metrics():
+    return jsonify({
+        "status": "metrics-ok"
+    })
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

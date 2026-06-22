@@ -23,13 +23,16 @@ The project demonstrates:
 
 ## Architecture
 
-Client
-↓
-Nginx (Port 80)
-↓
-Flask API (Port 5000)
-↓
-PostgreSQL (Port 5432)
+
+- Nginx → Reverse Proxy (port 80)
+- Flask API → Backend service (port 5000 internal)
+- PostgreSQL → Database
+- Prometheus → Metrics scraping
+- Grafana → Visualization
+
+### Flow
+
+Client → Nginx → API → DB
 
 ---
 
