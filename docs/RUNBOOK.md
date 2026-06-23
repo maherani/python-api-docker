@@ -1,28 +1,22 @@
-# SRE RUNBOOK — Python API Platform
+# SRE RUNBOOK — Python API Docker Platform
 
- 1. Service Overview
+## Purpose
 
-This system is a production-like Docker-based platform including:
+This document defines operational procedures for running, debugging, and recovering the system.
 
-- Flask API
-- PostgreSQL Database
-- Nginx Reverse Proxy
-- Prometheus (metrics)
-- Grafana (visualization)
+It is intended for:
 
- 2. Architecture
+- Developers
+- DevOps engineers
+- SRE engineers
 
-Client → Nginx → Flask API → PostgreSQL  
-                 ↓  
-          Prometheus → Grafana
+---
 
- 3. Start System
+# 1. Start System
 
-```bash
+```bash id="start_cmd"
 docker-compose up --build -d
-
-
-4. Verify System
+2. Verify System Health
 docker-compose ps
 
 Expected:
@@ -32,116 +26,130 @@ python_api → Up (healthy)
 db → Up (healthy)
 prometheus → Up
 grafana → Up
+3. Stop System
+docker-compose down
+4. Full Reset (Clean State)
 
-5. Health Check
+⚠️ Use carefully
+
+docker-compose down -v
+docker-compose up --build -d
+5. View Logs
+API Logs
+docker logs python_api --tail 100
+Nginx Logs
+docker logs nginx_proxy --tail 100
+Database Logs
+docker logs python-api-docker_db_1 --tail 100
+6. Health Checks
+API Health
 curl http://localhost/health
 
-Expected response:
+Expected:
 
 {
-  "status": "ok",
-  "request_id": "uuid"
+  "status": "ok"
 }
+Database Check
+curl http://localhost/db
 
-6. API Endpoints
-GET / → Main API
-GET /health → Health check
-GET /db → Database test
-GET /metrics → Prometheus metrics
+If failing:
 
-7. Logs
-API logs
-docker logs python_api --tail 100
-Nginx logs
-docker logs nginx_proxy --tail 100
-Database logs
-docker logs db --tail 100
+Check postgres container
+Check API logs
+Metrics Check
+curl http://localhost/metrics
+7. Common Issues
+7.1 502 Bad Gateway (Nginx)
 
-8. Common Issues
-502 Bad Gateway
+Symptoms:
 
-Cause:
+nginx returns 502
 
-API is down
-Nginx cannot reach upstream
+Causes:
+
+API down
+wrong upstream config
 
 Fix:
 
 docker restart nginx_proxy
 docker logs nginx_proxy
 
-Check:
-proxy_pass must be http://api:5000
+Check config:
 
-API Crash / Restart Loop
+must route to python_api:5000
+7.2 API Crash Loop
+
+Symptoms:
+
+python_api restarting
 
 Check logs:
 
 docker logs python_api --tail 200
 
-Possible causes:
+Common causes:
 
-missing dependency
-Python runtime error
-missing middleware (request_id / start_time)
-Database Connection Issues
-docker exec -it db psql -U app -d app
+missing Python dependency
+missing middleware (request_id, start_time)
+DB connection failure
+7.3 Database Connection Error
 
-9. Metrics
-curl http://localhost/metrics
+Check:
 
-10. Shutdown System
-docker-compose down
+docker exec -it python-api-docker_db_1 psql -U postgres
+7.4 Prometheus Not Scraping
 
-11. Full Reset (Clean State)
-docker-compose down -v
-docker-compose up --build -d
+Check targets:
 
-12. Network Architecture
+http://localhost:9090/targets
+8. Incident Response Model
+Severity Levels
+SEV1 (Critical)
+API down
+DB unreachable
+full system failure
 
-All services communicate via:
+Action:
 
-app_network (Docker bridge)
+restart system
+check logs immediately
+SEV2 (High)
+partial endpoint failure
+metrics broken
+SEV3 (Low)
+logging issues
+dashboard missing data
+9. Debug Workflow
 
-Internal routing:
+If system breaks:
 
-nginx → api:5000
-api → db:5432
+Check containers
+docker-compose ps
+Check logs
+docker logs <service>
+Check network
+docker network ls
+Restart service
+docker restart <service>
+10. Observability Tools
+Prometheus → metrics
+Grafana → dashboards
+Flask /metrics endpoint
+11. Known Stable State
 
-13. Security Notes
-Never commit secrets (tokens, passwords)
-Use .gitignore for sensitive files
-Database is not exposed externally
-nginx is the only public entry point
+System is healthy when:
 
-14. Deployment Flow
-Code change
-Update documentation
-Commit changes
-Push to Git
-Rebuild system
-docker-compose up --build -d
+nginx → Up
+api → Up (healthy)
+db → Up (healthy)
+prometheus → Up
+grafana → Up
+12. Golden Rule
 
-15. Onboarding
-git clone <repo>
-cd python-api-docker
-docker-compose up --build -d
+Never apply large changes without:
 
-Test:
-
-curl http://localhost/health
-
-16. System Summary
-
-This platform provides:
-
-Stable API service
-Database persistence
-Reverse proxy routing
-Observability stack (metrics + dashboards)
-
-Designed to be:
-
-reproducible
-debuggable
-production-ready
+checking logs
+verifying container health
+updating PROJECT_STATE.md

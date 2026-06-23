@@ -1,212 +1,324 @@
-# PROJECT_STATE.md
+# PROJECT STATE
 
-## Project Overview
-
-This is a learning DevOps project built with:
-
-* Flask
-* PostgreSQL
-* Docker
-* Docker Compose
-* Nginx Reverse Proxy
-* GitHub
-
-The purpose of this project is to learn practical DevOps concepts step by step.
+Last Updated: 2026-06-22
 
 ---
 
-## Current Status
+# Project Name
 
-### Infrastructure
-
-Running services:
-
-* nginx_proxy
-* python_api
-* postgres
-
-Container status:
-
-* nginx_proxy: healthy
-* python_api: healthy
-* postgres: healthy
+python-api-docker
 
 ---
 
-## Implemented Features
+# Objective
 
-### API Endpoints
+Build a production-like platform for learning and practicing:
 
-GET /
+- Docker
+- Docker Compose
+- Nginx Reverse Proxy
+- Flask API
+- PostgreSQL
+- Observability
+- Prometheus
+- Grafana
+- Logging
+- Monitoring
+- SRE Concepts
 
-Returns welcome response.
+Primary goal:
 
-GET /health
-
-Returns application health status.
-
-GET /db
-
-Tests PostgreSQL connectivity.
+Create a fully documented environment that can be understood, operated, and extended by a new developer (or future ChatGPT session) without prior knowledge.
 
 ---
 
-### Logging
+# Current Architecture
+
+Client
+↓
+Nginx (Port 80)
+↓
+Flask API (Port 5000)
+↓
+PostgreSQL
+
+Metrics pipeline:
+
+API → Prometheus → Grafana
+
+---
+
+# Implemented Features
+
+## API
+
+Implemented endpoints:
+
+- GET /
+- GET /health
+- GET /db
+- GET /metrics
+
+Observability:
+
+- request_id generation (middleware-based)
+- request latency calculation
+- structured JSON logging
+
+Example log:
+
+```json
+{
+  "request_id": "test-1",
+  "path": "/",
+  "method": "GET",
+  "status": 200,
+  "latency_ms": 0.03
+}
+
+Status:
+
+Running
+Healthy (with known intermittent DB error risk)
+Database
 
 Implemented:
 
-* JSON structured logging
-* Request ID support
-* Latency measurement
-* Method, path and status logging
+PostgreSQL 16 container
+Internal Docker network access
+Health checks enabled
 
-Example:
+Status:
 
-{
-"request_id": "test-1",
-"path": "/",
-"method": "GET",
-"status": 200,
-"latency_ms": 0.03
-}
+Running
+Healthy
 
----
+Note:
 
-### Reverse Proxy
+/db endpoint previously experienced intermittent 500 errors due to application-level exception handling issues.
 
-Nginx is the only exposed service.
+Nginx
 
-Exposed Port:
+Implemented:
 
-* 80
+Reverse proxy
+Routing to Flask API
 
-Internal services:
+Status:
 
-* Flask: 5000
-* PostgreSQL: 5432
+Stable (after fixing crash loop issue)
 
-Flask is not exposed directly to the host.
+Known Incident:
 
----
+Wrong nginx configuration caused restart loop.
 
-## Git Information
+Error:
+
+server directive is not allowed here
+
+Resolution:
+
+Root nginx.conf must not contain server block
+Use:
+nginx/conf.d/default.conf
+Monitoring
+
+Implemented:
+
+Prometheus container
+Grafana container
+/metrics endpoint in API
+
+Status:
+
+Infrastructure deployed
+Scraping validation: pending
+Grafana dashboard: not yet created
+Repository Status
 
 Repository:
 
-[git@github.com](mailto:git@github.com):maherani/python-api-docker.git
+python-api-docker
 
-Default Branch:
+Branch:
 
 main
 
----
+Documentation:
 
-## Problems Already Solved
+README.md
+docs/ARCHITECHURE.md
+docs/RUNBOOK.md
+docs/PROJECT_STATE.md
+Major Lessons Learned
+1. Logging Middleware Bug (Critical Incident)
 
-### Docker Permission
+Issue:
 
-Solved by:
+request.request_id missing
+request.start_time missing
+caused HTTP 500 errors
 
-sudo usermod -aG docker $USER
-newgrp docker
+Root Cause:
 
----
+Middleware was removed or not initialized before request lifecycle.
 
-### GitHub SSH Access
+Resolution:
 
-SSH port 22 is blocked in company network.
+Restored middleware
+Fixed incremental change approach
 
-Current workaround:
+Rule:
 
-HTTPS remote URL
+Never rewrite working Flask app fully. Apply incremental changes only.
 
----
+2. Nginx Misconfiguration (Critical Incident)
 
-### Secret Scanning Incident
+Issue:
 
-A GitHub PAT was accidentally committed.
+nginx container restart loop
 
-Actions:
+Error:
 
-* removed from git history
-* added to .gitignore
-* repository cleaned
+server directive is not allowed here
 
-Future rule:
+Root Cause:
 
-Never store tokens inside repository files.
+Wrong nginx.conf structure
 
----
+Resolution:
 
-## Next Planned Phase
+Move server block to:
+nginx/conf.d/default.conf
 
-Priority 1:
+Rule:
 
-Prometheus Metrics
+Do not replace full nginx root config unless necessary.
 
-Tasks:
+3. GitHub Push Protection Incident
 
-* add prometheus_client
-* create /metrics endpoint
-* expose metrics through nginx
+Issue:
 
-Priority 2:
+Personal Access Token committed accidentally
 
-Grafana Dashboard
+Impact:
 
-Tasks:
+Git push blocked (GH013 rule violation)
 
-* add Grafana container
-* visualize request count
-* visualize latency
+Resolution:
 
-Priority 3:
+Removed secret file
+Cleaned commit history
+Added .gitignore rules
 
+Rule:
+
+Never store secrets in repository.
+
+Current Known Good State
+
+Expected containers:
+
+nginx_proxy
+python_api
+db
+prometheus
+grafana
+
+Validation:
+
+docker-compose ps
+
+Expected:
+
+nginx_proxy → Up
+python_api → Up (healthy)
+db → Up (healthy)
+prometheus → Up
+grafana → Up
+Verified Working Features
+API
+curl http://localhost/
+
+Expected: HTTP 200
+
+curl http://localhost/health
+
+Expected:
+
+{
+  "status": "ok"
+}
+curl http://localhost/db
+
+Status:
+
+Works
+But previously observed intermittent 500 (needs stabilization review)
+curl http://localhost/metrics
+
+Expected:
+
+Prometheus metrics output
+
+Logging
+
+Verified structured JSON logs:
+
+{
+  "request_id": "test-1",
+  "path": "/",
+  "method": "GET",
+  "status": 200,
+  "latency_ms": 0.03
+}
+Pending Work
+High Priority
+Validate Prometheus scraping stability
+Validate Grafana datasource connection
+Create first dashboard
+Medium Priority
+Request count dashboard
+Latency dashboard
+Error rate dashboard
+Technical Debt
+Stabilize /db endpoint error handling
+Improve middleware robustness
+Add global exception handler
+Future Enhancements
 GitHub Actions CI/CD
+Alertmanager
+Loki logging stack
+OpenTelemetry tracing
+Distributed tracing
+Kubernetes deployment
+Blue/Green deployment
+Automated backup strategy
+Next Recommended Step
 
-Tasks:
+Complete observability validation:
 
-* lint
-* build
-* docker image build
-* automatic deployment
+API → Metrics → Prometheus → Grafana
 
----
+Success criteria:
 
-## Known Decisions
+Prometheus scraping OK
+Grafana datasource connected
+Dashboard shows live API metrics
+Notes For Future Sessions
 
-Decision 001:
+This file is the single source of truth for project state.
 
-Application logs must be JSON structured.
+Any new session should start by reading:
 
-Decision 002:
+PROJECT_STATE.md
+ARCHITECHURE.md
+RUNBOOK.md
 
-Only Nginx is exposed externally.
+These define:
 
-Decision 003:
-
-Database is accessible only from internal Docker network.
-
-Decision 004:
-
-Project focuses on learning DevOps incrementally.
-
----
-
-## Last Verified State
-
-Date:
-
-2026-06-22
-
-Verified By:
-
-Rasoul
-
-Result:
-
-Application working correctly through Nginx.
-Health endpoint operational.
-Database endpoint operational.
-Structured logging operational.
-GitHub repository synchronized.
+System architecture
+Operational behavior
+Known incidents
+Current stability level
+Next engineering steps

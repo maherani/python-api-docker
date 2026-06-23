@@ -1,173 +1,164 @@
-# Python API Docker Demo
+# Python API Docker Platform
 
 ## Overview
 
-This project is a sample production-style API stack built with:
+This project is a containerized microservice system designed for learning and practicing **real-world SRE and DevOps concepts**.
 
-* Flask
-* PostgreSQL
-* Docker
-* Docker Compose
-* Nginx Reverse Proxy
+It includes:
 
-The project demonstrates:
-
-* Containerized application deployment
-* Reverse proxy configuration
-* Health checks
-* Database connectivity
-* Structured logging
-* Request tracing using Request ID
+- Flask API (backend service)
+- PostgreSQL (database)
+- Nginx (reverse proxy)
+- Prometheus (metrics)
+- Grafana (monitoring & dashboards)
 
 ---
 
 ## Architecture
 
+Client
+↓
+Nginx (Port 80)
+↓
+Flask API (Port 5000)
+↓
+PostgreSQL
 
-- Nginx → Reverse Proxy (port 80)
-- Flask API → Backend service (port 5000 internal)
-- PostgreSQL → Database
-- Prometheus → Metrics scraping
-- Grafana → Visualization
+Observability Flow:
 
-### Flow
-
-Client → Nginx → API → DB
-
----
-
-## Components
-
-### Nginx
-
-Responsibilities:
-
-* Reverse proxy
-* Request forwarding
-* Header forwarding
-* Public entry point
-
-### Flask API
-
-Responsibilities:
-
-* Business logic
-* Health endpoint
-* Database endpoint
-* Structured logging
-
-### PostgreSQL
-
-Responsibilities:
-
-* Persistent data storage
-* Application database
+API → Prometheus → Grafana
 
 ---
 
-## Endpoints
+## Features
 
-### Health Check
+### API Service
 
-GET /health
+Endpoints:
 
-Response:
+- `GET /` → Main endpoint
+- `GET /health` → Health check
+- `GET /db` → Database connectivity test
+- `GET /metrics` → Prometheus metrics
+
+Observability features:
+
+- request_id per request
+- request latency tracking (ms)
+- structured JSON logging
+
+---
+
+### Database
+
+- PostgreSQL 16 container
+- Internal Docker network only
+- Health checks enabled
+
+---
+
+### Nginx Reverse Proxy
+
+- Single entry point (port 80)
+- Routes traffic to Flask API
+
+⚠️ Important Note:
+
+Correct configuration must be placed in:
+
+
+nginx/conf.d/default.conf
+
+
+Do NOT replace full nginx.conf root file.
+
+---
+
+### Monitoring Stack
+
+- Prometheus collects metrics from API
+- Grafana visualizes metrics
+- /metrics endpoint exposed by Flask
+
+---
+
+## Quick Start
+
+```bash
+docker-compose up --build -d
+Verify System
+docker-compose ps
+
+Expected:
+
+nginx_proxy → Up
+python_api → Up (healthy)
+db → Up (healthy)
+prometheus → Up
+grafana → Up
+Test Endpoints
+Health Check
+curl http://localhost/health
+
+Expected:
 
 {
-"status": "ok"
+  "status": "ok"
 }
+Database Test
+curl http://localhost/db
+Metrics
+curl http://localhost/metrics
+Known Issues
+Intermittent 500 Error on /db
 
-### Database Check
+Cause:
 
-GET /db
+Application-level exception handling issue
+Needs stabilization in DB error handling
+Nginx Misconfiguration History
 
-Response:
+Issue:
 
-{
-"status": "ok"
-}
+server directive used in wrong context
 
-### Root Endpoint
+Error:
 
-GET /
+server directive is not allowed here
 
-Response:
+Fix:
 
-{
-"message": "hello"
-}
+Use nginx/conf.d/default.conf
+Observability
+Prometheus scraping enabled
+Grafana dashboard available (setup pending)
+Development Workflow
 
----
+Before pushing changes:
 
-## Logging
-
-Each request generates a structured log entry.
-
-Example:
-
-{
-"request_id": "test-1",
-"path": "/",
-"method": "GET",
-"status": 200,
-"latency_ms": 0.03
-}
-
----
-
-## Local Development
-
-Build:
-
-docker-compose build
-
-Start:
-
-docker-compose up -d
-
-Stop:
-
-docker-compose down
-
-Logs:
-
-docker logs python_api
-
----
-
-## Git Workflow
-
-Pull latest changes:
-
-git pull origin main
-
-Push changes:
-
+Update code
+Update documentation if needed
+Run system tests
+Commit changes
+Push to GitHub
 git add .
-git commit -m "description"
+git commit -m "update"
 git push origin main
+Future Improvements
+CI/CD with GitHub Actions
+Centralized logging (Loki)
+Distributed tracing (OpenTelemetry)
+Alerting system (Alertmanager)
+Kubernetes deployment
+Goal of This Project
 
----
+This project is designed to simulate a real production SRE environment, including:
 
-## Environment Variables
-
-Configured through .env file.
-
-Database settings:
-
-POSTGRES_DB
-POSTGRES_USER
-POSTGRES_PASSWORD
-
----
-
-## Project Goal
-
-The purpose of this repository is learning:
-
-* Docker
-* Flask
-* PostgreSQL
-* Nginx
-* Observability
-* Production-style deployment
+service reliability
+observability
+failure handling
+infrastructure debugging
+Documentation
+RUNBOOK: docs/RUNBOOK.md
+ARCHITECTURE: docs/ARCHITECHURE.md
+PROJECT STATE: docs/PROJECT_STATE.md
