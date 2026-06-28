@@ -1,48 +1,49 @@
-# SRE RUNBOOK — Python API Docker Platform
+SRE RUNBOOK — python-api-docker
 
-## Purpose
+Version: 2026-06-28
+Scope: Operational procedures for runtime, debugging, and incident recovery
 
-This document defines operational procedures for running, debugging, and recovering the system.
+1. Purpose
 
-It is intended for:
+This runbook defines operational procedures for:
 
-- Developers
-- DevOps engineers
-- SRE engineers
+Running the system
+Debugging issues
+Recovering from failures
+Handling incidents
 
----
+Target audience:
 
-# 1. Start System
-
-```bash id="start_cmd"
+Developers
+DevOps engineers
+SRE engineers
+2. Start System
 docker-compose up --build -d
-2. Verify System Health
+3. Verify System Health
 docker-compose ps
-
-Expected:
-
+Expected State
 nginx_proxy → Up
 python_api → Up (healthy)
 db → Up (healthy)
 prometheus → Up
 grafana → Up
-3. Stop System
+4. Stop System
 docker-compose down
-4. Full Reset (Clean State)
+5. Full Reset (Clean State)
 
-⚠️ Use carefully
+⚠️ Danger: removes volumes and data
 
 docker-compose down -v
 docker-compose up --build -d
-5. View Logs
-API Logs
+6. Logs
+6.1 API Logs
 docker logs python_api --tail 100
-Nginx Logs
+6.2 Nginx Logs
 docker logs nginx_proxy --tail 100
-Database Logs
+6.3 Database Logs
 docker logs python-api-docker_db_1 --tail 100
-6. Health Checks
-API Health
+7. Health Checks
+7.1 API Health
 curl http://localhost/health
 
 Expected:
@@ -50,105 +51,87 @@ Expected:
 {
   "status": "ok"
 }
-Database Check
+7.2 Database Check
 curl http://localhost/db
 
 If failing:
 
-Check postgres container
+Check DB container
 Check API logs
-Metrics Check
+Verify network connectivity
+7.3 Metrics Check
 curl http://localhost/metrics
-7. Common Issues
-7.1 502 Bad Gateway (Nginx)
-
-Symptoms:
-
-nginx returns 502
-
-Causes:
-
-API down
-wrong upstream config
-
-Fix:
-
+8. Common Issues
+8.1 502 Bad Gateway (Nginx)
+Symptoms
+Nginx returns 502
+Causes
+API is down
+Incorrect upstream configuration
+Fix
 docker restart nginx_proxy
 docker logs nginx_proxy
 
-Check config:
+Ensure upstream points to:
 
-must route to python_api:5000
-7.2 API Crash Loop
-
-Symptoms:
-
-python_api restarting
-
-Check logs:
-
+python_api:5000
+8.2 API Crash Loop
+Symptoms
+python_api restarting continuously
+Debug
 docker logs python_api --tail 200
-
-Common causes:
-
-missing Python dependency
-missing middleware (request_id, start_time)
-DB connection failure
-7.3 Database Connection Error
+Common Causes
+Missing Python dependencies
+Middleware failure (request_id / timing)
+Database connection failure
+8.3 Database Connection Error
+Debug
+docker exec -it python-api-docker_db_1 psql -U postgres
+8.4 Prometheus Not Scraping
 
 Check:
 
-docker exec -it python-api-docker_db_1 psql -U postgres
-7.4 Prometheus Not Scraping
-
-Check targets:
-
 http://localhost:9090/targets
-8. Incident Response Model
-Severity Levels
+9. Incident Severity Model
 SEV1 (Critical)
 API down
-DB unreachable
-full system failure
+Database unreachable
+Full system failure
 
 Action:
 
-restart system
-check logs immediately
-SEV2 (High)
-partial endpoint failure
-metrics broken
-SEV3 (Low)
-logging issues
-dashboard missing data
-9. Debug Workflow
-
-If system breaks:
-
-Check containers
-docker-compose ps
+Immediate restart
 Check logs
-docker logs <service>
-Check network
-docker network ls
-Restart service
-docker restart <service>
-10. Observability Tools
-Prometheus → metrics
+SEV2 (High)
+Partial endpoint failure
+Metrics broken
+SEV3 (Low)
+Logging issues
+Dashboard missing data
+10. Debug Workflow
+
+When system breaks:
+
+1. docker-compose ps
+2. docker logs <service>
+3. check network
+4. restart service
+11. Observability Tools
+Prometheus → metrics collection
 Grafana → dashboards
-Flask /metrics endpoint
-11. Known Stable State
+Flask /metrics → exporter endpoint
+12. Known Stable State
 
 System is healthy when:
 
-nginx → Up
-api → Up (healthy)
+nginx_proxy → Up
+python_api → Up (healthy)
 db → Up (healthy)
 prometheus → Up
 grafana → Up
-12. Golden Rule
+13. Golden Rule
 
-Never apply large changes without:
+Never apply changes without:
 
 checking logs
 verifying container health

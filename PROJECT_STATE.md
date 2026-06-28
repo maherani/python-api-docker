@@ -1,324 +1,155 @@
-# PROJECT STATE
+PROJECT STATE
 
-Last Updated: 2026-06-22
+Last Updated: 2026-06-28
+Project: python-api-docker
+Status: Production-like Observability System (Learning Environment)
 
----
+1. Project Objective
 
-# Project Name
+This project is a production-like system designed to practice real-world DevOps and SRE concepts.
 
-python-api-docker
+It includes:
 
----
+Docker & Docker Compose
+Flask API development
+PostgreSQL database
+Nginx reverse proxy
+Prometheus metrics collection
+Grafana dashboards
+Logging & monitoring
+Observability fundamentals (SRE)
+Primary Goal
 
-# Objective
+Build a fully documented system that:
 
-Build a production-like platform for learning and practicing:
-
-- Docker
-- Docker Compose
-- Nginx Reverse Proxy
-- Flask API
-- PostgreSQL
-- Observability
-- Prometheus
-- Grafana
-- Logging
-- Monitoring
-- SRE Concepts
-
-Primary goal:
-
-Create a fully documented environment that can be understood, operated, and extended by a new developer (or future ChatGPT session) without prior knowledge.
-
----
-
-# Current Architecture
-
+Can be understood without prior context
+Can be rebuilt from documentation alone
+Mimics real production observability pipelines
+2. Current System Architecture
 Client
-↓
-Nginx (Port 80)
-↓
+  ↓
+Nginx (Reverse Proxy - Port 80)
+  ↓
 Flask API (Port 5000)
-↓
+  ↓
 PostgreSQL
-
-Metrics pipeline:
-
-API → Prometheus → Grafana
-
----
-
-# Implemented Features
-
-## API
-
-Implemented endpoints:
-
-- GET /
-- GET /health
-- GET /db
-- GET /metrics
-
-Observability:
-
-- request_id generation (middleware-based)
-- request latency calculation
-- structured JSON logging
-
-Example log:
-
-```json
-{
-  "request_id": "test-1",
-  "path": "/",
-  "method": "GET",
-  "status": 200,
-  "latency_ms": 0.03
-}
-
-Status:
-
-Running
-Healthy (with known intermittent DB error risk)
-Database
-
-Implemented:
-
-PostgreSQL 16 container
-Internal Docker network access
+3. Observability Architecture
+Flask API → Custom Metrics (/metrics) → Prometheus → Grafana Dashboards
+4. Implemented Components
+4.1 Flask API
+Endpoints
+GET / → Root health response
+GET /health → Service status check
+GET /db → Database connectivity test
+GET /metrics → Prometheus metrics endpoint
+Observability Features
+Request ID middleware
+Request latency tracking
+Structured JSON logging
+Custom metrics (request rate, latency, errors)
+Endpoint-level monitoring
+4.2 PostgreSQL
+Implementation
+PostgreSQL container (Dockerized)
+Internal Docker networking
 Health checks enabled
-
-Status:
-
+Connected to Flask API via /db
+Status
 Running
 Healthy
+4.3 Nginx
+Role
+Reverse proxy (entry point)
+Routes traffic to Flask API
+Status
+Stable and production-like
+4.4 Monitoring Stack
+Components
+Prometheus (metrics collection)
+Grafana (visual dashboards)
+Flask /metrics exporter
+Metrics Available
+Request count
+Request rate
+Latency (response time)
+Error rate
+Endpoint-level traffic
+Status
+Prometheus: Running
+Grafana: Running
+Metrics: Active and scraping
+5. System Status Overview
+Component	Status
+API	Running
+Database	Healthy
+Nginx	Stable
+Prometheus	Running
+Grafana	Running
+Metrics	Active
+6. Known Issues
+/db endpoint occasionally unstable (rare)
+Middleware sensitive to structural changes
+Needs stronger global exception handling
+7. Major Lessons Learned
+7.1 Middleware Design
 
-Note:
+Improper middleware ordering causes:
 
-/db endpoint previously experienced intermittent 500 errors due to application-level exception handling issues.
+missing request_id
+broken request lifecycle
+HTTP 500 errors
 
-Nginx
+Rule:
+Never refactor Flask core in a single step.
 
-Implemented:
+7.2 Nginx Configuration
 
-Reverse proxy
-Routing to Flask API
+Incorrect structure causes container crash loops.
 
-Status:
-
-Stable (after fixing crash loop issue)
-
-Known Incident:
-
-Wrong nginx configuration caused restart loop.
-
-Error:
-
-server directive is not allowed here
-
-Resolution:
-
-Root nginx.conf must not contain server block
+Rule:
 Use:
+
 nginx/conf.d/default.conf
-Monitoring
+7.3 Observability Principle
 
-Implemented:
+Metrics must evolve alongside the API, not after it.
 
-Prometheus container
-Grafana container
-/metrics endpoint in API
+7.4 Secrets Handling
 
-Status:
+Never commit sensitive data (tokens, keys, credentials).
 
-Infrastructure deployed
-Scraping validation: pending
-Grafana dashboard: not yet created
-Repository Status
-
-Repository:
-
-python-api-docker
-
-Branch:
-
-main
-
-Documentation:
-
-README.md
-docs/ARCHITECHURE.md
-docs/RUNBOOK.md
-docs/PROJECT_STATE.md
-Major Lessons Learned
-1. Logging Middleware Bug (Critical Incident)
-
-Issue:
-
-request.request_id missing
-request.start_time missing
-caused HTTP 500 errors
-
-Root Cause:
-
-Middleware was removed or not initialized before request lifecycle.
-
-Resolution:
-
-Restored middleware
-Fixed incremental change approach
-
-Rule:
-
-Never rewrite working Flask app fully. Apply incremental changes only.
-
-2. Nginx Misconfiguration (Critical Incident)
-
-Issue:
-
-nginx container restart loop
-
-Error:
-
-server directive is not allowed here
-
-Root Cause:
-
-Wrong nginx.conf structure
-
-Resolution:
-
-Move server block to:
-nginx/conf.d/default.conf
-
-Rule:
-
-Do not replace full nginx root config unless necessary.
-
-3. GitHub Push Protection Incident
-
-Issue:
-
-Personal Access Token committed accidentally
-
-Impact:
-
-Git push blocked (GH013 rule violation)
-
-Resolution:
-
-Removed secret file
-Cleaned commit history
-Added .gitignore rules
-
-Rule:
-
-Never store secrets in repository.
-
-Current Known Good State
-
-Expected containers:
-
-nginx_proxy
-python_api
-db
-prometheus
-grafana
-
-Validation:
-
-docker-compose ps
-
-Expected:
-
-nginx_proxy → Up
-python_api → Up (healthy)
-db → Up (healthy)
-prometheus → Up
-grafana → Up
-Verified Working Features
-API
-curl http://localhost/
-
-Expected: HTTP 200
-
-curl http://localhost/health
-
-Expected:
-
-{
-  "status": "ok"
-}
-curl http://localhost/db
-
-Status:
-
-Works
-But previously observed intermittent 500 (needs stabilization review)
-curl http://localhost/metrics
-
-Expected:
-
-Prometheus metrics output
-
-Logging
-
-Verified structured JSON logs:
-
-{
-  "request_id": "test-1",
-  "path": "/",
-  "method": "GET",
-  "status": 200,
-  "latency_ms": 0.03
-}
-Pending Work
-High Priority
-Validate Prometheus scraping stability
-Validate Grafana datasource connection
-Create first dashboard
-Medium Priority
-Request count dashboard
-Latency dashboard
-Error rate dashboard
-Technical Debt
-Stabilize /db endpoint error handling
-Improve middleware robustness
+8. Technical Debt
+Improve /db robustness
 Add global exception handler
-Future Enhancements
-GitHub Actions CI/CD
-Alertmanager
+Standardize logging format
+Strengthen middleware reliability
+9. Future Enhancements
+Alertmanager integration (alerting layer)
 Loki logging stack
 OpenTelemetry tracing
-Distributed tracing
+CI/CD with GitHub Actions
 Kubernetes deployment
-Blue/Green deployment
-Automated backup strategy
-Next Recommended Step
+Blue/Green deployment strategy
+Automated backups
+10. Next Step (System Evolution)
 
-Complete observability validation:
+The system is now in a fully observable state.
 
-API → Metrics → Prometheus → Grafana
+Next phase:
 
-Success criteria:
+Alerting + Advanced Dashboards
 
-Prometheus scraping OK
-Grafana datasource connected
-Dashboard shows live API metrics
-Notes For Future Sessions
+Suggested direction:
 
-This file is the single source of truth for project state.
+Grafana dashboards (latency / error rate / request rate)
+Alert rules (Prometheus Alertmanager)
+SLO / SLI definition
+11. Documentation Rule
 
-Any new session should start by reading:
+This file is the single source of truth.
+
+Always check before changes:
 
 PROJECT_STATE.md
 ARCHITECHURE.md
 RUNBOOK.md
-
-These define:
-
-System architecture
-Operational behavior
-Known incidents
-Current stability level
-Next engineering steps
