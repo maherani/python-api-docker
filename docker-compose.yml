@@ -15,6 +15,9 @@ services:
       - db
     networks:
       - app_network
+    ports:
+      - "5000:5000"
+
 
   db:
     image: postgres:16
@@ -43,25 +46,33 @@ services:
     networks:
       - app_network
 
+
   prometheus:
     image: prom/prometheus
     container_name: prometheus
     ports:
       - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
     networks:
-      - app_network
+    - app_network
+
 
   grafana:
     image: grafana/grafana
     container_name: grafana
     ports:
       - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
     networks:
       - app_network
 
+
 volumes:
-  db_data:
+    db_data:
+    grafana_data:
 
 networks:
-  app_network:
-    driver: bridge
+    app_network:
+      driver: bridge

@@ -1,8 +1,31 @@
 import time
 import uuid
-from flask import Flask, request, jsonify, g
+from flask import Flask, request, jsonify, g, Response
+
+from prometheus_client import (
+    Counter,
+    Histogram,
+    generate_latest,
+    CONTENT_TYPE_LATEST
+)
 
 app = Flask(__name__)
+
+# -------------------------
+# Prometheus Metrics
+# -------------------------
+
+REQUEST_COUNT = Counter(
+    "http_requests_total",
+    "Total HTTP Requests",
+    ["method", "endpoint", "status"]
+)
+
+REQUEST_LATENCY = Histogram(
+    "http_request_duration_seconds",
+    "HTTP request latency",
+    ["endpoint"]
+)
 
 # -------------------------
 # Middleware
@@ -12,6 +35,28 @@ def before_request():
     g.request_id = str(uuid.uuid4())
     g.start_time = time.time()
 
+
+@app.after_request
+def after_request(response):
+
+    endpoint = request.path
+
+    # متریک‌های خود Prometheus را دوباره نشمار
+    if endpoint != "/metrics":
+
+        latency = time.time() - g.start_time
+
+        REQUEST_COUNT.labels(
+            request.method,
+            endpoint,
+            response.status_code
+        ).inc()
+
+        REQUEST_LATENCY.labels(
+            endpoint
+        ).observe(latency)
+
+    return response
 # -------------------------
 # Health
 # -------------------------
@@ -69,14 +114,37 @@ def db():
             "request_id": g.request_id
         }), 500
 
+#--------------------------
+#   slow  Endpoint
+#--------------------------
+@app.route("/slow")
+def slow():
+    time.sleep(3)
+
+    return jsonify({
+        "message": "Slow endpoint",
+        "request_id": g.request_id
+    })
+
+#--------------------------------
+# Error Endpoint
+#-------------------------------
+@app.route("/error")
+def error():
+    return jsonify({
+        "message": "Internal Server Error"
+    }), 500
+
+
 # -------------------------
 # Metrics (simple placeholder)
 # -------------------------
 @app.route("/metrics")
 def metrics():
-    return jsonify({
-        "status": "metrics-ok"
-    })
+    return Response(
+        generate_latest(),
+        mimetype=CONTENT_TYPE_LATEST
+    )
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
