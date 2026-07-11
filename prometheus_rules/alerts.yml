@@ -1,0 +1,43 @@
+groups:
+- name: infrastructure
+  rules:
+
+  - alert: ApiDown
+    expr: up{job="api"} == 0
+    for: 10s
+    labels:
+      severity: critical
+    annotations:
+      summary: "API is DOWN"
+
+  - alert: PrometheusDown
+    expr: up{job="prometheus"} == 0
+    for: 10s
+    labels:
+      severity: critical
+    annotations:
+      summary: "Prometheus is DOWN"
+
+  - alert: NodeExporterDown
+    expr: up{job="node-exporter"} == 0
+    for: 10s
+    labels:
+      severity: critical
+    annotations:
+      summary: "Node Exporter is DOWN"
+
+  - alert: HighCPUUsage
+    expr: 100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
+    for: 10s
+    labels:
+      severity: warning
+    annotations:
+      summary: "CPU Usage > 90%"
+
+  - alert: HighMemoryUsage
+    expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+    for: 10s
+    labels:
+      severity: warning
+    annotations:
+      summary: "Memory Usage > 90%"

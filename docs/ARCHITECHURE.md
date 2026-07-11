@@ -202,3 +202,22 @@ Reverse proxy layer (Nginx)
 Application layer (Flask)
 Data layer (PostgreSQL)
 Observability stack (Prometheus + Grafana
+
+15. 
+Windows
+│
+├── Docker Desktop
+│     │
+│     ├── Registry Mirror
+│     │
+│     └── WSL2 Integration
+│
+└── Ubuntu (WSL2)
+      │
+      └── python-api-docker
+            │
+            ├── Flask API
+            ├── PostgreSQL
+            ├── Nginx
+            ├── Prometheus
+            └── Grafana

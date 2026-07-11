@@ -1,0 +1,22 @@
+global:
+  resolve_timeout: 5m
+route:
+  receiver: telegram
+  group_wait: 10s
+  group_interval: 30s
+  repeat_interval: 1h
+
+receivers:
+- name: telegram
+  telegram_configs:
+  - bot_token:  "8815911812:AAFNKwPUPfrnRdj41q1M51qKUcAiF9gDJJY"
+    chat_id: 98366012
+    message: |
+      🚨 Alert از سیستم مانیتورینگ
+
+      وضعیت: {{ .Status }}
+      {{ range .Alerts }}
+      نام: {{ .Labels.alertname }}
+      توضیح: {{ .Annotations.summary }}
+      شدت: {{ .Labels.severity }}
+      {{ end }}

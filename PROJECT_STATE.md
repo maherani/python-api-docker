@@ -153,3 +153,19 @@ Always check before changes:
 PROJECT_STATE.md
 ARCHITECHURE.md
 RUNBOOK.md
+
+
+12. Current Known Good State
+
+Windows 11
+Docker Desktop
+WSL2 Ubuntu
+Docker Compose v2
+Registry Mirror configured
+All containers running successfully
+
+13. Major Lessons Learned
+
+Docker Hub access may fail because of DNS/routing restrictions.
+Docker Registry Mirror can completely eliminate Docker Hub connectivity issues without modifying project files.
+Windows + WSL2 provides a stable development environment for the project.

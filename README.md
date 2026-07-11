@@ -182,3 +182,33 @@ Author Notes
   Observability pipelines
 
 It is intentionally structured to simulate real-world production issues and debugging workflows.
+
+
+Docker Registry Mirror Configuration
+
+Problem:
+Docker Hub may not be reachable in some networks due to DNS or routing restrictions.
+
+Solution:
+
+Docker Desktop
+Settings
+→ Docker Engine
+
+{
+  ...
+  "registry-mirrors": [
+    "https://docker-mirror.liara.ir"
+  ]
+}
+
+Apply & Restart
+
+Verification:
+
+docker pull postgres:16
+docker pull nginx:alpine
+docker pull prom/prometheus:latest
+
+
+If all images are pulled successfully, the mirror is configured correctly.
