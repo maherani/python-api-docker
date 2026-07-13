@@ -79,17 +79,19 @@ Prometheus: Running
 Grafana: Running
 Metrics: Active and scraping
 5. System Status Overview
-Component	Status
-API	Running
-Database	Healthy
-Nginx	Stable
-Prometheus	Running
-Grafana	Running
-Metrics	Active
+Component    | Status
+------------ | -------------
+API          | Running (Verified on Port 5000)
+Database     | Healthy (Verified connectivity)
+Nginx        | Stable (Using default baseline configuration)
+Prometheus   | Running & Actively Scraping
+Grafana      | Running & Connected to Prometheus Data Source (Verified)
+Metrics      | Active (Custom metrics like http_requests_total verified via load test)
 6. Known Issues
 /db endpoint occasionally unstable (rare)
 Middleware sensitive to structural changes
 Needs stronger global exception handling
+
 7. Major Lessons Learned
 7.1 Middleware Design
 
@@ -118,6 +120,9 @@ Metrics must evolve alongside the API, not after it.
 
 Never commit sensitive data (tokens, keys, credentials).
 
+7.5 Prometheus Scraping Behavior:** Changes in application endpoints (like `/db`) aren't reflected instantly; they adhere to the defined `scrape_interval` (5s).
+
+7.6 Metric Typology:** Standard container health metrics (`up`) only show binary status (0 or 1), whereas custom counters (`http_requests_total`) are required to track actual traffic behavior.
 8. Technical Debt
 Improve /db robustness
 Add global exception handler
