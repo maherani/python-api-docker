@@ -1,43 +1,61 @@
 groups:
-- name: infrastructure
-  rules:
+  - name: infrastructure
+    rules:
 
-  - alert: ApiDown
-    expr: up{job="api"} == 0
-    for: 10s
-    labels:
-      severity: critical
-    annotations:
-      summary: "API is DOWN"
+      # ==========================================
+      # 1.availability  for alive services
+      # ==========================================
 
-  - alert: PrometheusDown
-    expr: up{job="prometheus"} == 0
-    for: 10s
-    labels:
-      severity: critical
-    annotations:
-      summary: "Prometheus is DOWN"
+      - alert: ApiDown
+        expr: up{job="api"} == 0
+        for: 10s
+        labels:
+          severity: critical
+          tier: api
+        annotations:
+          summary: "API is DOWN"
+          description: "The container 'api' (instance {{ $labels.instance }}) has been unreachable for more than 10 seconds."
 
-  - alert: NodeExporterDown
-    expr: up{job="node-exporter"} == 0
-    for: 10s
-    labels:
-      severity: critical
-    annotations:
-      summary: "Node Exporter is DOWN"
+      - alert: PrometheusDown
+        expr: up{job="prometheus"} == 0
+        for: 10s
+        labels:
+          severity: critical
+          tier: monitoring
+        annotations:
+          summary: "Prometheus is DOWN"
+          description: "Prometheus instance {{ $labels.instance }} failed to scrape itself."
 
-  - alert: HighCPUUsage
-    expr: 100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
-    for: 10s
-    labels:
-      severity: warning
-    annotations:
-      summary: "CPU Usage > 90%"
+      - alert: NodeExporterDown
+        expr: up{job="node-exporter"} == 0
+        for: 10s
+        labels:
+          severity: warning
+          tier: infrastructure
+        annotations:
+          summary: "Node Exporter is DOWN"
+          description: "Hardware metrics collection from {{ $labels.instance }} has stopped."
 
-  - alert: HighMemoryUsage
-    expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
-    for: 10s
-    labels:
-      severity: warning
-    annotations:
-      summary: "Memory Usage > 90%"
+      # ==========================================
+      # 2. Hard ware Resources alrets
+      # ==========================================
+
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
+        for: 1m
+        labels:
+          severity: warning
+          tier: infrastructure
+        annotations:
+          summary: "High CPU Usage on {{ $labels.instance }}"
+          description: "CPU usage on {{ $labels.instance }} is currently at {{ $value | printf \"%.2f\" }}% (over 90% for 1 minute)."
+
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+        for: 1m
+        labels:
+          severity: warning
+          tier: infrastructure
+        annotations:
+          summary: "High Memory Usage on {{ $labels.instance }}"
+          description: "Memory usage on {{ $labels.instance }} is currently at {{ $value | printf \"%.2f\" }}% (over 90% for 1 minute)."
