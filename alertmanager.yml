@@ -9,7 +9,7 @@ route:
 receivers:
 - name: telegram
   telegram_configs:
-  - bot_token:  "8815911812:AAFNKwPUPfrnRdj41q1M51qKUcAiF9gDJJY"
+  - bot_token:  "8815911812:AAHeB-lNneuAQdNeDL5lalJrZgCyFjfPHTw"
     chat_id: 98366012
     message: |
       🚨 Alert از سیستم مانیتورینگ

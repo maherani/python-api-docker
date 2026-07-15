@@ -59,3 +59,17 @@ groups:
         annotations:
           summary: "High Memory Usage on {{ $labels.instance }}"
           description: "Memory usage on {{ $labels.instance }} is currently at {{ $value | printf \"%.2f\" }}% (over 90% for 1 minute)."
+      #========================================================
+      # 3. Database alrets 
+      #========================================================
+
+      - alert: PostgresDatabaseDown
+        expr: pg_up == 0
+#        expr: pg_up{job="postgres-exporter"} == 0
+        for: 10s
+        labels:
+          severity: critical
+          tier: database
+        annotations:
+          summary: "Database Postgres is DOWN"
+          description: "The API is running, but it has lost connection to the PostgreSQL database."
