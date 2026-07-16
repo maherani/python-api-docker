@@ -64,7 +64,7 @@ groups:
       #========================================================
 
       - alert: PostgresDatabaseDown
-        expr: pg_up == 0
+        expr: pg_up == 0 or absent(pg_up)
 #        expr: pg_up{job="postgres-exporter"} == 0
         for: 10s
         labels:

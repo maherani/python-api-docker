@@ -55,7 +55,7 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - ./prometheus_rules:/etc/prometheus/rules
-
+      - ./prometheus_data:/prometheus
     networks:
     - app_network
 
@@ -114,7 +114,8 @@ services:
 
     ports:
       - "3100:3100"
-
+    volumes:
+      - ./loki_data:/loki
     command: -config.file=/etc/loki/local-config.yaml
 
     networks:

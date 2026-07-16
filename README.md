@@ -70,11 +70,26 @@ Flask API → Prometheus → Grafana
 
 ---
 
-### Monitoring Stack
+## 📊 Monitoring Stack (Prometheus, Grafana, Loki & Alloy)
 
-- Prometheus → metrics collection
-- Grafana → dashboards & visualization
+This project features a fully containerized, persistent, and production-ready monitoring stack.
 
+### 🧱 Architecture & Component Flow
+1. **PostgreSQL** handles core database operations.
+2. **Postgres Exporter** continuously scrapes metrics from DB (`pg_up`).
+3. **Grafana Alloy** acts as the central telemetry collector, forwarding metrics to **Prometheus** and logs to **Grafana Loki**.
+4. **Prometheus & Loki** evaluate alerting rules.
+5. **Alertmanager** routes triggered alarms to the **Telegram Bot** destination.
+6. **Grafana** visualizes state with fully persistent dashboards.
+
+### 💾 Data Persistence (Volumes)
+To prevent data loss on `docker compose down`, local host-mapped directory volumes are defined:
+- `./postgres_data` -> Database storage
+- `./grafana_data` -> Persistent dashboards and user configs
+- `./prometheus_data` -> Long-term metrics history
+- `./loki_data` -> System logs index
+
+---
 ---
 
 ## Tech Stack

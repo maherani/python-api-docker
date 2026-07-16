@@ -3,3 +3,6 @@ __pycache__/
 .env
 db_data/
 token.txt
+grafana_data/
+prometheus_data/
+loki_data/
