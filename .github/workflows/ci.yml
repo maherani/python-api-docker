@@ -1,16 +1,48 @@
-name: Python API Docker CI (Step 1)
+name: CI Observability Pipeline
 
 on:
   push:
-    branches: ["main"]
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
 
 jobs:
-  test:
+  test-and-build:
     runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: myuser
+          POSTGRES_PASSWORD: mypassword
+          POSTGRES_DB: mydb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
 
-      - name: Show project structure
-        run: ls -la
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v4
+
+    - name: Set up Python runtime
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flask psycopg2-binary prometheus_client requests
+
+    - name: Run Code Syntax Check
+      run: |
+        python -m py_compile app.py
+
+    - name: Verify Docker Image Build
+      run: |
+        docker build -t test-api-image:latest .
