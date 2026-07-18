@@ -131,12 +131,13 @@ services:
       - "12345:12345"
 
     volumes:
-      - ./alloy/config.alloy:/etc/alloy/config.alloy
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
     command:
-      - run
-      - /etc/alloy/config.alloy
+      run --storage.path=/tmp/alloy-data /etc/alloy/config.alloy
+#      - run
+#      - /etc/alloy/config.alloy
 
     depends_on:
       - loki
