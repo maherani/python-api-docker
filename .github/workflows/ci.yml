@@ -1,6 +1,7 @@
-# GitHub Actions workflow for Python API Continuous Integration and Local Deployment
+# GitHub Actions workflow for Enterprise CI/CD Pipeline with Manual Approval
 name: CI/CD Production Pipeline
 
+# Trigger the workflow only on push or pull request to main and master branches
 on:
   push:
     branches: [ main, master ]
@@ -72,17 +73,19 @@ jobs:
   deploy:
     needs: test-and-build
     runs-on: self-hosted
+    # Only allow deployment on hard pushes to release branches, not on Pull Requests
     if: github.event_name == 'push'
+    # Bind this job to the GitHub protected environment for human sign-off
+    environment: production
 
     steps:
-    - name: Run Local Container Deployment
+    - name: Check Directory and Sync Code
       run: |
-        # Navigate to your workspace directory where docker-compose.yml lives
         cd ~/python-api-docker
+        git fetch --all
+        git reset --hard origin/${{ github.ref_name }}
 
-        # Clean any local changes and pull the latest verified commits
-        git reset --hard
-        git pull origin ${{ github.ref_name }}
-
-        # Rebuild and restart your container stack in the background
+    - name: Launch Container Stack
+      run: |
+        cd ~/python-api-docker
         docker compose up --build --force-recreate -d
