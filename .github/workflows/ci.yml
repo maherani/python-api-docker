@@ -1,7 +1,5 @@
-# GitHub Actions workflow for Enterprise CI/CD Pipeline with Manual Approval
 name: CI/CD Production Pipeline
 
-# Trigger the workflow only on push or pull request to main and master branches
 on:
   push:
     branches: [ main, master ]
@@ -16,9 +14,9 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: app
-          POSTGRES_PASSWORD: SuperSecurePassword_2026!
-          POSTGRES_DB: app
+          POSTGRES_USER: ${{ secrets.DB_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.DB_NAME }}
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -55,9 +53,9 @@ jobs:
 
     - name: Run Application Tests with Coverage
       env:
-        DB_USER: app
-        DB_PASSWORD: SuperSecurePassword_2026!
-        DB_NAME: app
+        DB_USER: ${{ secrets.DB_USER }}
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        DB_NAME: ${{ secrets.DB_NAME }}
         DB_HOST: localhost
       run: |
         if [ -d "tests" ]; then
@@ -70,23 +68,21 @@ jobs:
       run: |
         docker build -t company-api-image:latest .
 
- deploy:
-     needs: test-and-build
-     runs-on: self-hosted
-     # 1. Must be a push to main branch
-     # 2. AND the person executing the action must be Alborz (the DevOps Admin)
-     if: |
-       github.event_name == 'push' &&
-       github.actor == 'maherani'
+  deploy:
+    needs: test-and-build
+    runs-on: self-hosted
+    if: |
+      github.event_name == 'push' &&
+      github.actor == 'maherani'
 
-     steps:
-      - name: Check Directory and Sync Code
-        run: |
-         cd ~/python-api-docker
-         git fetch --all
-         git reset --hard origin/${{ github.ref_name }}
+    steps:
+    - name: Check Directory and Sync Code
+      run: |
+        cd ~/python-api-docker
+        git fetch --all
+        git reset --hard origin/${{ github.ref_name }}
 
-      - name: Launch Container Stack
-        run: |
-         cd ~/python-api-docker
-         docker compose up --build --force-recreate -d
+    - name: Launch Container Stack
+      run: |
+        cd ~/python-api-docker
+        docker compose up --build --force-recreate -d
