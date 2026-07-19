@@ -75,9 +75,14 @@ jobs:
     if: github.event_name == 'push'
 
     steps:
-    - name: Verify Deployment Environment
+    - name: Run Local Container Deployment
       run: |
-        echo "Starting CD pipeline locally on workstation..."
-        docker --version
-        docker compose version
-        pwd
+        # Navigate to your workspace directory where docker-compose.yml lives
+        cd ~/python-api-docker
+
+        # Clean any local changes and pull the latest verified commits
+        git reset --hard
+        git pull origin ${{ github.ref_name }}
+
+        # Rebuild and restart your container stack in the background
+        docker compose up --build --force-recreate -d
