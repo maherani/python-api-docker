@@ -2,14 +2,13 @@ name: CI/CD Production Pipeline
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, production ]
   pull_request:
     branches: [ main, master ]
 
 jobs:
   test-and-build:
     runs-on: ubuntu-latest
-
     services:
       postgres:
         image: postgres:16
@@ -24,7 +23,6 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-
     steps:
     - name: Check out repository code
       uses: actions/checkout@v4
@@ -40,16 +38,13 @@ jobs:
         pip install flask psycopg2-binary prometheus_client requests pytest pytest-cov ruff bandit
 
     - name: Run Linting Check (Ruff)
-      run: |
-        ruff check app/
+      run: ruff check app/
 
     - name: Run Security Analysis (Bandit)
-      run: |
-        bandit -r app/ -ll
+      run: bandit -r app/ -ll
 
     - name: Run Code Syntax Check
-      run: |
-        python -m py_compile app/app.py
+      run: python -m py_compile app/app.py
 
     - name: Run Application Tests with Coverage
       env:
@@ -58,29 +53,22 @@ jobs:
         DB_NAME: ${{ secrets.DB_NAME }}
         DB_HOST: localhost
       run: |
-        if [ -d "tests" ]; then
-          pytest --cov=app/
-        else
-          echo "No tests directory found. Skipping extended unit tests."
-        fi
+        if [ -d "tests" ]; then pytest --cov=app/; else echo "No tests found."; fi
 
     - name: Verify Docker Image Build
-      run: |
-        docker build -t company-api-image:latest .
+      run: docker build -t company-api-image:latest .
 
   deploy:
     needs: test-and-build
     runs-on: self-hosted
-    if: |
-      github.event_name == 'push' &&
-      github.actor == 'maherani'
+    if: github.ref_name == 'production'
 
     steps:
     - name: Check Directory and Sync Code
       run: |
         cd ~/python-api-docker
         git fetch --all
-        git reset --hard origin/${{ github.ref_name }}
+        git reset --hard origin/production
 
     - name: Launch Container Stack
       run: |
