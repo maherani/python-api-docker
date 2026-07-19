@@ -1,5 +1,7 @@
 # Production-Grade Containerized Python API Platform
 
+
+
 A production-like, fully containerized system engineered for hands-on learning, development, and practice of **DevOps Engineering, Site Reliability Engineering (SRE), and Observability Architectures**. 
 
 This repository simulates real-world backend infrastructure patterns, deliberately structured to emulate industry-standard production problems, system-design constraints, and modern debugging workflows.
