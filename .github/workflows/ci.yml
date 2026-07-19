@@ -70,22 +70,23 @@ jobs:
       run: |
         docker build -t company-api-image:latest .
 
-  deploy:
-    needs: test-and-build
-    runs-on: self-hosted
-    # Only allow deployment on hard pushes to release branches, not on Pull Requests
-    if: github.event_name == 'push'
-    # Bind this job to the GitHub protected environment for human sign-off
-    environment: production
+ deploy:
+     needs: test-and-build
+     runs-on: self-hosted
+     # 1. Must be a push to main branch
+     # 2. AND the person executing the action must be Alborz (the DevOps Admin)
+     if: |
+       github.event_name == 'push' &&
+       github.actor == 'maherani'
 
-    steps:
-    - name: Check Directory and Sync Code
-      run: |
-        cd ~/python-api-docker
-        git fetch --all
-        git reset --hard origin/${{ github.ref_name }}
+     steps:
+      - name: Check Directory and Sync Code
+        run: |
+         cd ~/python-api-docker
+         git fetch --all
+         git reset --hard origin/${{ github.ref_name }}
 
-    - name: Launch Container Stack
-      run: |
-        cd ~/python-api-docker
-        docker compose up --build --force-recreate -d
+      - name: Launch Container Stack
+        run: |
+         cd ~/python-api-docker
+         docker compose up --build --force-recreate -d
