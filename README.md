@@ -271,21 +271,33 @@ docker compose up -d
 To ensure server security and maintain a clear separation of roles, container deployment is configured as a two-stage (approval-based) workflow. Developers are not permitted to deploy directly to the production server.
 
 ### 1. Developer Workflow (Development & Testing)
-Developers must push their verified changes to the `main` branch or submit a Pull Request:
+Developers push their changes exclusively to the `main` branch using their personal developer token:
 
 ```bash
 git checkout main
 git pull origin main
+# Make code changes...
+git add .
+git commit -m "feat: description of changes"
+git push https://<DEVELOPER_USERNAME>:<DEVELOPER_TOKEN>@[github.com/maherani/python-api-docker.git](https://github.com/maherani/python-api-docker.git) main
+
+* Result: This action triggers only the linting, security scanning, and testing jobs (test-and-build) in GitHub Actions. The live server deployment job (deploy) is automatically Skipped, ensuring code changes do not affect production without review.
+
+* Security Note: If a developer attempts to push directly to the production branch, GitHub will reject the request with a Protected branch error.
+
 # Make your changes...
 git add .
 git commit -m "fix: description of changes"
 git push origin main
 
-Result: This action triggers only the linting, security scanning, and testing jobs (test-and-build) in GitHub Actions. The server deployment job (deploy) is automatically Skipped, keeping the server untouched.
-2. DevOps Admin Workflow (Final Review & Deployment)
-New code updates apply to the production containers only when the DevOps Admin reviews the code and syncs it with the production branch. Pushing to this branch serves as the official Manual Approval:
+* Result: This action triggers only the linting, security scanning, and testing jobs (test-and-build) in GitHub Actions. The server deployment job (deploy) is automatically Skipped, keeping the server untouched.
+
+2. DevOps Admin Workflow (Final Review & Live Deployment)
+New updates apply to the production containers only when the DevOps Admin reviews the successful test run on main and syncs the code with the protected production branch using Admin credentials:
+
 # Switch to the dedicated deployment branch
 git checkout production
+git pull origin production
 
 # Merge the approved changes from the main branch
 git merge main
@@ -293,4 +305,4 @@ git merge main
 # Push to trigger the live server deployment
 git push origin production
 
-Result: The production branch workflow initializes. Once the test suite passes successfully, the local runner builds the Docker images and updates the live container stack.
+* Result: The production branch workflow initializes. Once the test suite passes successfully, the runner automatically updates and recreates the live Docker container stack.
