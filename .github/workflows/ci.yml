@@ -1,5 +1,5 @@
-# GitHub Actions workflow for Python API Continuous Integration
-name: CI Production Pipeline
+# GitHub Actions workflow for Python API Continuous Integration and Local Deployment
+name: CI/CD Production Pipeline
 
 on:
   push:
@@ -27,42 +27,35 @@ jobs:
           - 5432:5432
 
     steps:
-    # Step 1: Fetch the latest source code from the repository
     - name: Check out repository code
       uses: actions/checkout@v4
 
-    # Step 2: Initialize the official Python environment on the runner
     - name: Set up Python runtime
       uses: actions/setup-python@v5
       with:
         python-version: '3.10'
 
-    # Step 3: Upgrade pip and install core, testing, and security scanning dependencies
     - name: Install base dependencies
       run: |
         python -m pip install --upgrade pip
         pip install flask psycopg2-binary prometheus_client requests pytest pytest-cov ruff bandit
 
-    # Step 4: Run Ruff to check code style, formatting, and potential Python bugs
     - name: Run Linting Check (Ruff)
       run: |
         ruff check app/
 
-    # Step 5: Scan Python code for security vulnerabilities using Bandit
     - name: Run Security Analysis (Bandit)
       run: |
         bandit -r app/ -ll
 
-    # Step 6: Perform a static syntax check using the correct relative path
     - name: Run Code Syntax Check
       run: |
         python -m py_compile app/app.py
 
-    # Step 7: Execute unit tests with coverage tracking
     - name: Run Application Tests with Coverage
       env:
         DB_USER: app
-        DB_PASSWORD: SuperSecurePassword_2026!
+        DB_PASSWORD:SuperSecurePassword_2026!
         DB_NAME: app
         DB_HOST: localhost
       run: |
@@ -72,7 +65,19 @@ jobs:
           echo "No tests directory found. Skipping extended unit tests."
         fi
 
-    # Step 8: Test the local Dockerfile compilation process without pushing to registry
     - name: Verify Docker Image Build
       run: |
         docker build -t company-api-image:latest .
+
+  deploy:
+    needs: test-and-build
+    runs-on: self-hosted
+    if: github.event_name == 'push'
+
+    steps:
+    - name: Verify Deployment Environment
+      run: |
+        echo "Starting CD pipeline locally on workstation..."
+        docker --version
+        docker compose version
+        pwd
