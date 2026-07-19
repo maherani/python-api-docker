@@ -1,5 +1,7 @@
-name: CI Observability Pipeline
+# GitHub Actions workflow for Python API Continuous Integration
+name: CI Production Pipeline
 
+# Trigger the workflow on push or pull request to main and master branches
 on:
   push:
     branches: [ main, master ]
@@ -10,13 +12,15 @@ jobs:
   test-and-build:
     runs-on: ubuntu-latest
 
+    # Spin up an isolated PostgreSQL service container running alongside the runner
     services:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: myuser
-          POSTGRES_PASSWORD: mypassword
-          POSTGRES_DB: mydb
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: SuperSecurePassword_2026!
+          POSTGRES_DB: app
+        # Ensure PostgreSQL is ready to accept connections before running steps
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -26,23 +30,29 @@ jobs:
           - 5432:5432
 
     steps:
+    # Step 1: Fetch the latest source code from the repository
     - name: Check out repository code
       uses: actions/checkout@v4
 
+    # Step 2: Initialize the official Python environment on the runner
     - name: Set up Python runtime
       uses: actions/setup-python@v5
       with:
         python-version: '3.10'
 
-    - name: Install dependencies
+    # Step 3: Upgrade pip and install required web and monitoring modules
+    - name: Install base dependencies
       run: |
         python -m pip install --upgrade pip
         pip install flask psycopg2-binary prometheus_client requests
 
+    # Step 4: Perform a static syntax check to catch runtime execution errors early
     - name: Run Code Syntax Check
       run: |
         python -m py_compile app.py
 
+    # Step 5: Test the local Dockerfile compilation process without pushing to registry
     - name: Verify Docker Image Build
       run: |
-        docker build -t test-api-image:latest .
+        docker build -t company-api-image:latest .
+
