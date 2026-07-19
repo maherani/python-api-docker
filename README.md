@@ -264,4 +264,31 @@ sudo chmod -R 777 loki_data
 # Re-instantiate the environment clean
 docker compose up -d
 ```
+## 🚀 Git Workflow & Deployment Process
 
+To ensure server security and maintain a clear separation of roles, container deployment is configured as a two-stage (approval-based) workflow. Developers are not permitted to deploy directly to the production server.
+
+### 1. Developer Workflow (Development & Testing)
+Developers must push their verified changes to the `main` branch or submit a Pull Request:
+
+```bash
+git checkout main
+git pull origin main
+# Make your changes...
+git add .
+git commit -m "fix: description of changes"
+git push origin main
+
+Result: This action triggers only the linting, security scanning, and testing jobs (test-and-build) in GitHub Actions. The server deployment job (deploy) is automatically Skipped, keeping the server untouched.
+2. DevOps Admin Workflow (Final Review & Deployment)
+New code updates apply to the production containers only when the DevOps Admin reviews the code and syncs it with the production branch. Pushing to this branch serves as the official Manual Approval:
+# Switch to the dedicated deployment branch
+git checkout production
+
+# Merge the approved changes from the main branch
+git merge main
+
+# Push to trigger the live server deployment
+git push origin production
+
+Result: The production branch workflow initializes. Once the test suite passes successfully, the local runner builds the Docker images and updates the live container stack.
