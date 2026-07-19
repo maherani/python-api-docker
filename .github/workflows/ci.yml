@@ -49,7 +49,7 @@ jobs:
     # Step 4: Perform a static syntax check to catch runtime execution errors early
     - name: Run Code Syntax Check
       run: |
-        python -m py_compile app.py
+        python -m py_compile app/app.py
 
     # Step 5: Test the local Dockerfile compilation process without pushing to registry
     - name: Verify Docker Image Build
