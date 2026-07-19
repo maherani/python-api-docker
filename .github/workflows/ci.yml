@@ -55,7 +55,7 @@ jobs:
     - name: Run Application Tests with Coverage
       env:
         DB_USER: app
-        DB_PASSWORD:SuperSecurePassword_2026!
+        DB_PASSWORD: SuperSecurePassword_2026!
         DB_NAME: app
         DB_HOST: localhost
       run: |
