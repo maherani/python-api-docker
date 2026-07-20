@@ -1,12 +1,13 @@
-# Production-Grade Containerized Python API Platform
-
-
+# Python API Dockerization & Infrastructure
 
 A production-like, fully containerized system engineered for hands-on learning, development, and practice of **DevOps Engineering, Site Reliability Engineering (SRE), and Observability Architectures**. 
 
 This repository simulates real-world backend infrastructure patterns, deliberately structured to emulate industry-standard production problems, system-design constraints, and modern debugging workflows.
 
 ---
+
+
+
 
 ## 🏛️ System Architecture
 
@@ -143,6 +144,21 @@ curl http://localhost/metrics
 
 ---
 
+## 🛡️ Infrastructure & High Availability
+
+- **Reverse Proxy & Load Balancing:** Nginx routes incoming HTTP traffic on port 80 across backend application replicas.
+- **Zero-Downtime Deployment:** Configured Docker Compose rolling updates with health checks to ensure continuous uptime during deploys.
+- **Infrastructure as Code (IaC):** Added Ansible Playbooks under `ansible/` to automate server setup and package management.
+
+### Running the Infrastructure
+```bash
+# Start services with multiple app replicas
+docker compose up -d --scale app=2
+
+# Check status and health
+curl http://localhost/health
+
+---------------------
 ## 📊 Core Observability Targets & Management Dashboards
 
 Once all system workflows take an **Up** status, the internal administrative consoles can be reached directly via web interfaces:

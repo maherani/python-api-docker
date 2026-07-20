@@ -1,3 +1,4 @@
+
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -16,4 +17,9 @@ USER appuser
 
 EXPOSE 5000
 
+
+# If using python directly
 CMD ["python", "app.py"]
+
+# OR if using flask CLI
+# CMD ["flask", "run", "--host=0.0.0.0", "--port=5000"]
