@@ -35,7 +35,8 @@ services:
 
 # Backend Python API
   app:
-    build: .
+#    build: .
+    image: maheranii/python-api-docker:v1
     restart: always
     environment:
       - PORT=5000

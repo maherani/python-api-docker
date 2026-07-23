@@ -1,0 +1,24 @@
+---
+- name: Deploy Python API and Nginx Stack
+  hosts: webservers
+  become: yes
+  vars:
+    dest_dir: /opt/python-api-docker
+
+  tasks:
+    - name: Ensure application directory exists
+      file:
+        path: "{{ dest_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Copy all project files to the server
+      copy:
+        src: ../
+        dest: "{{ dest_dir }}"
+        mode: preserve
+
+    - name: Deploy stack with 2 application replicas
+      command: docker compose up -d --scale app=2
+      args:
+        chdir: "{{ dest_dir }}"
