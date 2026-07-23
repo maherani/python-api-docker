@@ -14,8 +14,8 @@
 
     - name: Copy all project files to the server
       copy:
-        src: ../
-        dest: "{{ dest_dir }}"
+        src: "{{ playbook_dir }}/../"
+        dest: "{{ dest_dir }}/"
         mode: preserve
 
     - name: Set correct permissions for Prometheus data
