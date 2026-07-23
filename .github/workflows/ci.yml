@@ -66,11 +66,20 @@ jobs:
     steps:
     - name: Check Directory and Sync Code
       run: |
-        cd ~/python-api-docker
-        git fetch --all
-        git reset --hard origin/production
+        # تغییر مسیر به پوشه استاندارد که با انسیبل ساختیم
+        cd /opt/python-api-docker
+        sudo git fetch --all
+        sudo git reset --hard origin/production
+
+    - name: Set Permissions for Monitoring
+      run: |
+        cd /opt/python-api-docker
+        # ساخت پوشه‌ها اگر وجود ندارند و باز کردن قفل آن‌ها
+        sudo mkdir -p loki_data prometheus_data
+        sudo chown -R 10001:10001 loki_data
+        sudo chown -R 65534:65534 prometheus_data
 
     - name: Launch Container Stack
       run: |
-        cd ~/python-api-docker
-        docker compose up --build --force-recreate -d
+        cd /opt/python-api-docker
+        sudo docker compose up --build --force-recreate -d
