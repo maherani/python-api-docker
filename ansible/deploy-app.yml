@@ -18,6 +18,22 @@
         dest: "{{ dest_dir }}"
         mode: preserve
 
+    - name: Set correct permissions for Prometheus data
+      file:
+        path: "{{ dest_dir }}/prometheus_data"
+        state: directory
+        owner: "65534"
+        group: "65534"
+        recurse: yes
+
+    - name: Set correct permissions for Loki data
+      file:
+        path: "{{ dest_dir }}/loki_data"
+        state: directory
+        owner: "10001"
+        group: "10001"
+        recurse: yes
+
     - name: Deploy stack with 2 application replicas
       command: docker compose up -d --scale app=2
       args:
