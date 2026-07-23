@@ -64,21 +64,29 @@ jobs:
     if: github.ref_name == 'production'
 
     steps:
-    - name: Check Directory and Sync Code
-      run: |
-        # تغییر مسیر به پوشه استاندارد که با انسیبل ساختیم
-        cd /opt/python-api-docker
-        sudo git fetch --all
-        sudo git reset --hard origin/production
+    # ۱. دانلود کدهای جدید به صورت استاندارد توسط خود گیت‌هاب (امن‌ترین روش)
+    - name: Check out repository code
+      uses: actions/checkout@v4
 
-    - name: Set Permissions for Monitoring
+    # ۲. انتقال کدها به مسیر سرور و تنظیم دسترسی‌ها
+    - name: Sync Code to /opt and Set Permissions
       run: |
+        # ساخت پوشه اصلی سرور (دقیقاً همان چیزی که خودت حدس زدی)
+        sudo mkdir -p /opt/python-api-docker
+
+        # کپی کردن کدهای جدید از ورک‌اسپیسِ رانر به پوشه اصلی سرور
+        sudo cp -a . /opt/python-api-docker/
+
         cd /opt/python-api-docker
-        # ساخت پوشه‌ها اگر وجود ندارند و باز کردن قفل آن‌ها
+
+        # ساخت پوشه‌های دیتابیس
         sudo mkdir -p loki_data prometheus_data
+
+        # باز کردن قفل پرمیشن‌ها برای داکر
         sudo chown -R 10001:10001 loki_data
         sudo chown -R 65534:65534 prometheus_data
 
+    # ۳. اجرای کانتینرها با کدهای جدید
     - name: Launch Container Stack
       run: |
         cd /opt/python-api-docker
