@@ -1,25 +1,6 @@
 version: "3.9"
 
 services:
-
-
-  api:
-    build: .
-    container_name: api
-    restart: unless-stopped
-    environment:
-      - DB_HOST=${DB_HOST}
-      - DB_NAME=${DB_NAME}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-    depends_on:
-      - db
-    networks:
-      - app_network
-    ports:
-      - "5000:5000"
-
-
   db:
     image: postgres:16
     container_name: db
@@ -28,6 +9,7 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
+      POSTGRES_HOST_AUTH_METHOD: trust   # <--- این خط کلیدی را اضافه کن
     volumes:
       - db_data:/var/lib/postgresql/data
     networks:
@@ -35,12 +17,15 @@ services:
 
 # Backend Python API
   app:
-#    build: .
     image: maheranii/python-api-docker:v1
     restart: always
     environment:
       - PORT=5000
       - FLASK_RUN_HOST=0.0.0.0
+      - DB_HOST=db
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
     # Health check to ensure zero-downtime updates
     healthcheck:
       test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:5000/health\")' || exit 1"]
@@ -58,7 +43,6 @@ services:
     networks:
       - app_network
 
-
 # Nginx Reverse Proxy & Load Balancer
   nginx:
     image: nginx:alpine
@@ -72,7 +56,6 @@ services:
       - app
     networks:
       - app_network
-
 
 # Prometheus Monitoring
   prometheus:
@@ -89,16 +72,19 @@ services:
     depends_on:
       - app
     networks:
-    - app_network
-
+      - app_network
 
   grafana:
-    image: grafana/grafana
+    image: grafana/grafana:latest
     container_name: grafana
+    restart: unless-stopped
     ports:
       - "3000:3000"
     volumes:
       - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+      - loki
     networks:
       - app_network
 
@@ -106,36 +92,26 @@ services:
     image: prom/alertmanager:latest
     container_name: alertmanager
     restart: unless-stopped
-
     ports:
       - "9093:9093"
-
     volumes:
       - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
-
     command:
       - "--config.file=/etc/alertmanager/alertmanager.yml"
-
     networks:
       - app_network
-
 
   node-exporter:
     image: prom/node-exporter:latest
     container_name: node-exporter
     restart: unless-stopped
-
     ports:
       - "9100:9100"
-
     pid: host
-
     volumes:
       - /:/host:ro,rslave
-
     command:
       - '--path.rootfs=/host'
-
     networks:
       - app_network
 
@@ -149,51 +125,39 @@ services:
     volumes:
       - ./loki_data:/loki
     command: -config.file=/etc/loki/local-config.yaml
-
     networks:
       - app_network
-
 
   alloy:
     image: grafana/alloy:latest
     container_name: alloy
     restart: unless-stopped
-
     ports:
       - "12345:12345"
-
     volumes:
       - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-
-    command:
-      run --storage.path=/tmp/alloy-data /etc/alloy/config.alloy
-#      - run
-#      - /etc/alloy/config.alloy
-
+    command: run --storage.path=/tmp/alloy-data /etc/alloy/config.alloy
     depends_on:
       - loki
-
     networks:
       - app_network
-
 
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter
     container_name: postgres-exporter
+    command: --web.listen-address=:9187
     environment:
-       command: --web.listen-address=:9187
-       DATA_SOURCE_NAME: "postgresql://app:SuperSecurePassword_2026!@db:5432/app?sslmode=disable"
+      DATA_SOURCE_NAME: "postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable"
     ports:
       - "0.0.0.0:9187:9187"
     networks:
-     - app_network
-
+      - app_network
 
 volumes:
-    db_data:
-    grafana_data:
+  db_data:
+  grafana_data:
 
 networks:
-    app_network:
-      driver: bridge
+  app_network:
+    driver: bridge
