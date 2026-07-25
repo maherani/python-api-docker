@@ -151,7 +151,7 @@ def db():
             "latency_ms": round((time.time() - start_time) * 1000, 2)
         })
 
-    except Exception as e:
+    except Exception as e: # noqa: BLE001
         log_json("CRITICAL", f"Database connection failed: {e!s}")
         return jsonify({
             "db": "error",
