@@ -5,16 +5,15 @@ groups:
       # ==========================================
       # 1.availability  for alive services
       # ==========================================
-
-      - alert: ApiDown
+      - alert: ApiReplicaDown
         expr: up{job="api"} == 0
         for: 10s
         labels:
           severity: critical
           tier: api
         annotations:
-          summary: "API is DOWN"
-          description: "The container 'api' (instance {{ $labels.instance }}) has been unreachable for more than 10 seconds."
+          summary: "One of the API replicas is DOWN"
+          description: "API container (instance {{ $labels.instance }}) has been unreachable for more than 10 seconds. The load balancer is routing traffic to the healthy replica, but check the logs immediately."
 
       - alert: PrometheusDown
         expr: up{job="prometheus"} == 0
