@@ -1,6 +1,3 @@
-version: "3.9"
-
-
 services:
   db:
     image: postgres:16
@@ -10,14 +7,13 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
-      POSTGRES_HOST_AUTH_METHOD: trust   # <--- این خط کلیدی را اضافه کن
+      POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
       - db_data:/var/lib/postgresql/data
     networks:
       - app_network
 
-
-# Backend Python API
+  # Backend Python API
   app:
     image: maheranii/python-api-docker:v1
     restart: always
@@ -28,24 +24,24 @@ services:
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
-    # Health check to ensure zero-downtime updates
     healthcheck:
       test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:5000/health\")' || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 3
       start_period: 5s
-    # Deploy policy for rolling updates
     deploy:
       replicas: 2
       update_config:
-        parallelism: 1      # Update one container at a time
-        delay: 5s           # Wait 5s before updating the next
-        order: start-first  # Start new container before stopping old one
+        parallelism: 1
+        delay: 5s
+        order: start-first
     networks:
       - app_network
+    depends_on:
+      - db
 
-# Nginx Reverse Proxy & Load Balancer
+  # Nginx Reverse Proxy & Load Balancer
   nginx:
     image: nginx:alpine
     container_name: reverse_proxy
@@ -59,7 +55,7 @@ services:
     networks:
       - app_network
 
-# Prometheus Monitoring
+  # Prometheus Monitoring
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
