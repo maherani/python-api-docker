@@ -6,7 +6,7 @@ groups:
       # 1.availability  for alive services
       # ==========================================
       - alert: ApiReplicaDown
-        expr: up{job="api"} == 0
+        expr: up{job="app"} == 0
         for: 10s
         labels:
           severity: critical
