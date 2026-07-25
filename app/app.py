@@ -152,7 +152,7 @@ def db():
         })
 
     except Exception as e:
-        log_json("CRITICAL", f"Database connection failed: {str(e)}")
+        log_json("CRITICAL", f"Database connection failed: {e!s}")
         return jsonify({
             "db": "error",
             "error": str(e),
