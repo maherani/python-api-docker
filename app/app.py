@@ -1,16 +1,11 @@
-import time
-import uuid
 import json
 import logging
 import sys
-from flask import Flask, request, jsonify, g, Response
+import time
+import uuid
 
-from prometheus_client import (
-    Counter,
-    Histogram,
-    generate_latest,
-    CONTENT_TYPE_LATEST
-)
+from flask import Flask, Response, g, jsonify, request
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 
 app = Flask(__name__)
 
