@@ -1,5 +1,6 @@
 version: "3.9"
 
+
 services:
   db:
     image: postgres:16
@@ -14,6 +15,7 @@ services:
       - db_data:/var/lib/postgresql/data
     networks:
       - app_network
+
 
 # Backend Python API
   app:
@@ -68,7 +70,7 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus_rules:/etc/prometheus/rules
-      - ./prometheus_data:/prometheus
+      - prometheus_data:/prometheus
     depends_on:
       - app
     networks:
@@ -123,7 +125,7 @@ services:
     ports:
       - "3100:3100"
     volumes:
-      - ./loki_data:/loki
+      - loki_data:/loki
     command: -config.file=/etc/loki/local-config.yaml
     networks:
       - app_network
@@ -157,6 +159,8 @@ services:
 volumes:
   db_data:
   grafana_data:
+  prometheus_data:
+  loki_data:
 
 networks:
   app_network:
