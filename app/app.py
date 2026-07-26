@@ -1,3 +1,4 @@
+import os
 import json
 import logging
 import sys
@@ -6,8 +7,44 @@ import uuid
 
 from flask import Flask, Response, g, jsonify, request
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 
 app = Flask(__name__)
+
+
+# Fetch environment variables to construct the database connection string
+db_user = os.environ.get('DB_USER', 'postgres')
+db_password = os.environ.get('DB_PASSWORD', 'postgres')
+db_name = os.environ.get('DB_NAME', 'postgres')
+db_host = os.environ.get('DB_HOST', 'db')
+
+# Configure SQLAlchemy database settings
+app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{db_user}:{db_password}@{db_host}:5432/{db_name}"
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Initialize Flask extensions
+db_ext = SQLAlchemy(app)
+migrate = Migrate(app, db_ext)
+
+# ==============================================================================
+# DATABASE MODELS
+# ==============================================================================
+class User(db_ext.Model):
+    __tablename__ = 'users'
+
+    id = db_ext.Column(db_ext.Integer, primary_key=True)
+    username = db_ext.Column(db_ext.String(80), unique=True, nullable=False)
+    email = db_ext.Column(db_ext.String(120), unique=True, nullable=False)
+    created_at = db_ext.Column(db_ext.DateTime, server_default=db_ext.func.now())
+
+    def to_dict(self):
+        """Helper method to serialize the user object into a JSON-compatible dictionary."""
+        return {
+            "id": self.id,
+            "username": self.username,
+            "email": self.email
+        }
 
 # ==============================================================================
 # STRUCTURED JSON LOGGING SETUP
@@ -97,6 +134,47 @@ def after_request(response):
 # ==============================================================================
 # CORE ROUTING APPLICATION ENDPOINTS
 # ==============================================================================
+@app.route("/users", methods=["POST"])
+def create_user():
+    """Creates a new user record in the database from a JSON payload."""
+    data = request.get_json()
+
+    # Validate incoming payload
+    if not data or not data.get("username") or not data.get("email"):
+        log_json("WARNING", "Invalid payload for user creation")
+        return jsonify({
+            "error": "Missing 'username' or 'email' in request body",
+            "request_id": getattr(g, 'request_id', 'N/A')
+        }), 400
+
+    try:
+        # Instantiate and populate the new User model
+        new_user = User(
+            username=data["username"],
+            email=data["email"]
+        )
+
+        # Commit the transaction to the database
+        db_ext.session.add(new_user)
+        db_ext.session.commit()
+
+        log_json("INFO", f"User created successfully: {new_user.username}")
+        return jsonify({
+            "message": "User created successfully",
+            "user": new_user.to_dict(),
+            "request_id": getattr(g, 'request_id', 'N/A')
+        }), 201
+
+    except Exception as e:
+        # Rollback the session in case of duplicate entries or integrity errors
+        db_ext.session.rollback()
+        log_json("ERROR", f"Database transaction failed: {e!s}")
+        return jsonify({
+            "error": "Database error (e.g., username or email already exists)",
+            "request_id": getattr(g, 'request_id', 'N/A')
+        }), 500
+
+
 @app.route("/")
 def home():
     """Root confirmation status check endpoint."""
@@ -125,10 +203,10 @@ def db():
 
         # Connect utilizing internal overlay network bridges
         conn = psycopg2.connect(
-            host="db",
-            database="app",
-            user="app",
-            password="app"
+            host=os.environ.get('DB_HOST', 'db'),
+            database=os.environ.get('DB_NAME', 'postgres'),
+            user=os.environ.get('DB_USER', 'postgres'),
+            password=os.environ.get('DB_PASSWORD', 'postgres')
         )
 
         cur = conn.cursor()
