@@ -1,0 +1,12 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    # Proxy access (Grafana server connects to Prometheus server)
+    access: proxy
+    # Prometheus container address in the Docker network
+    url: http://prometheus:9090
+    isDefault: true
+    # Prevent manual edits in Grafana UI (managed via code)
+    editable: false
