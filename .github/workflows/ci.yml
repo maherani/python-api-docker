@@ -97,6 +97,11 @@ jobs:
         TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}
         EOF'
 
+    # متوقف کردن Nginx لوکال برای جلوگیری از تداخل پورت ۸۰
+    - name: Disable local Nginx to free port 80
+      run: |
+        sudo systemctl stop nginx || true
+        sudo systemctl disable nginx || true
 
     # ۳. اجرای کانتینرها با کدهای جدید
     - name: Launch Container Stack
