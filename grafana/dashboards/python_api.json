@@ -10,7 +10,6 @@
   "panels": [
     {
       "title": "Total Requests per Second (RPS) by Endpoint",
-      "description": "Measures the rate of incoming HTTP requests distributed by their target endpoints.",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "Prometheus" },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
@@ -27,7 +26,6 @@
     },
     {
       "title": "HTTP 5xx Server Error Rate",
-      "description": "Tracks the rate of requests resulting in internal server errors (status 5xx).",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "Prometheus" },
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
@@ -44,7 +42,6 @@
     },
     {
       "title": "P95 Latency (Response Time)",
-      "description": "Calculates the 95th percentile of request duration (Latency). 95% of requests are faster than this value.",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "Prometheus" },
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
@@ -58,15 +55,36 @@
       "fieldConfig": {
         "defaults": { "unit": "s", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 15 } }
       }
+    },
+    {
+      "title": "Application Logs (Structured JSON)",
+      "description": "Live JSON logs streaming from the Python API containers via Alloy & Loki.",
+      "type": "logs",
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "Loki" },
+          "expr": "{container=~\"(?i).*app.*\"} | json",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending"
+      }
     }
   ],
   "refresh": "10s",
   "schemaVersion": 38,
-  "tags": ["python", "api", "flask"],
+  "tags": ["python", "api", "flask", "logs"],
   "templating": { "list": [] },
   "time": { "from": "now-1h", "to": "now" },
   "timezone": "browser",
   "title": "Python API Monitoring",
   "uid": "python-api-monitoring",
-  "version": 1
+  "version": 2
 }
