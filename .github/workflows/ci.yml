@@ -86,6 +86,18 @@ jobs:
         sudo chown -R 10001:10001 loki_data
         sudo chown -R 65534:65534 prometheus_data
 
+    # ۳. ساخت اتوماتیک فایل .env با استفاده از GitHub Secrets
+    - name: Generate .env file securely
+      run: |
+        sudo bash -c 'cat << EOF > /opt/python-api-docker/.env
+        DB_USER=${{ secrets.DB_USER }}
+        DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+        DB_NAME=${{ secrets.DB_NAME }}
+        TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}
+        EOF'
+
+
     # ۳. اجرای کانتینرها با کدهای جدید
     - name: Launch Container Stack
       run: |
