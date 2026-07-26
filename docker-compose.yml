@@ -80,7 +80,12 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - grafana_data:/var/lib/grafana
+      # Persist Grafana core data
+      - ./grafana_data:/var/lib/grafana
+      # Mount provisioning configs (Datasources & Dashboard providers)
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      # Mount dashboard JSON files
+      - ./grafana/dashboards:/etc/grafana/dashboards
     depends_on:
       - prometheus
       - loki
