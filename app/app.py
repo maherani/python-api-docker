@@ -9,6 +9,7 @@ from flask import Flask, Response, g, jsonify, request
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from sqlalchemy.exc import SQLAlchemyError
 
 app = Flask(__name__)
 
@@ -165,7 +166,7 @@ def create_user():
             "request_id": getattr(g, 'request_id', 'N/A')
         }), 201
 
-    except Exception as e:
+    except SQLAlchemyError as e:
         # Rollback the session in case of duplicate entries or integrity errors
         db_ext.session.rollback()
         log_json("ERROR", f"Database transaction failed: {e!s}")
