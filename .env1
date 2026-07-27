@@ -1,0 +1,8 @@
+# تنظیمات دیتابیس
+DB_USER=app
+DB_PASSWORD=SuperSecurePassword_2026!
+DB_NAME=app
+DB_HOST=db
+# تنظیمات تلگرام و آلارم‌ها
+TELEGRAM_BOT_TOKEN=8815911812:AAHeB-lNneuAQdNeDL5lalJrZgCyFjfPHTw
+TELEGRAM_CHAT_ID=98366012
