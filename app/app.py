@@ -1,14 +1,14 @@
-import os
 import json
 import logging
+import os
 import sys
 import time
 import uuid
 
 from flask import Flask, Response, g, jsonify, request
-from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
-from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from flask_sqlalchemy import SQLAlchemy
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 from sqlalchemy.exc import SQLAlchemyError
 
 app = Flask(__name__)
