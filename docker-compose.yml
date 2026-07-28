@@ -82,7 +82,7 @@ services:
       - "3000:3000"
     volumes:
       # Persist Grafana core data
-      - ./grafana_data:/var/lib/grafana
+      - grafana_data:/var/lib/grafana
       # Mount provisioning configs (Datasources & Dashboard providers)
       - ./grafana/provisioning:/etc/grafana/provisioning
       # Mount dashboard JSON files
