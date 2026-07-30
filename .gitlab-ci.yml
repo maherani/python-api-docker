@@ -1,0 +1,16 @@
+# Define the stages of our pipeline
+stages:
+  - test
+
+# Job to verify that the runner is executing properly
+verify_runner_job:
+  stage: test
+
+  # Use a lightweight Python image for this job
+  image: python:3.9-slim
+
+  # Commands that the runner will execute in the terminal
+  script:
+    - echo "Congratulations! The local GitLab Runner is working perfectly."
+    - echo "Checking Python version:"
+    - python --version
