@@ -1,223 +1,86 @@
-SYSTEM ARCHITECTURE — Python API Docker Platform
+# System Architecture Specification
 
-Project: python-api-docker
-Layer: Production-like SRE Learning System
-Version: 2026-06-28
+**Project:** python-api-docker
+**Architecture Phase:** Production-Grade Containerized Environment (v2.x)
+**Focus Areas:** High Availability, Observability, Infrastructure as Code (IaC), and DevSecOps.
 
-1. Overview
+---
 
-This system is a containerized microservice architecture designed to simulate production-grade SRE patterns.
+## 1. High-Level Topology
 
-It includes:
+The system is built on a heavily decoupled, containerized architecture using Docker and orchestrated via Docker Compose. It leverages isolated virtual networks to ensure security, meaning internal services (like the database and backend APIs) are completely shielded from the public internet. External traffic is strictly routed through a reverse proxy.
 
-Reverse proxy routing
-Service isolation
-Observability pipeline
-Database separation
-Metrics collection
-2. High-Level Architecture
-Client
-  ↓
-Nginx (Reverse Proxy - Port 80)
-  ↓
-Flask API (Internal Service - Port 5000)
-  ↓
-PostgreSQL (Internal Database)
-3. Observability Flow
-Flask API → Prometheus → Grafana
-4. Component Breakdown
-4.1 Nginx (Edge Layer)
-Role
-Entry point of system
-Reverse proxy
-Traffic routing to API
-Configuration Constraint
+---
 
-Nginx must NOT contain full application config in nginx.conf.
+## 2. Core Layers & Components
 
-Correct Structure
-nginx/
-└── conf.d/
-    └── default.conf
-Routing
-External traffic → nginx:80
-Internal → python_api:5000
-4.2 Flask API (Application Layer)
-Role
+### 2.1. Ingress & Gateway Layer (Nginx)
+* **Role:** Acts as the single entry point (Reverse Proxy) for all client requests.
+* **Security:** Implements IP-based rate limiting (10 requests per second) to mitigate DDoS attacks and API abuse.
+* **Routing:** Forwards validated HTTP traffic from host port `80` to the internal API container.
 
-Core backend service
+### 2.2. Application Layer (Python / Flask)
+* **Role:** The core business logic and RESTful API handling.
+* **Environment:** Runs on Python 3.11-slim to minimize image size and attack surface.
+* **Internal Communication:** Listens on internal port `5000` (not exposed to the host). Connects to the database using Docker's internal DNS (`db:5432`).
 
-Responsibilities
-Business logic
-Request handling
-Database communication
-Metrics exposure
-Endpoints
-GET / → Base endpoint
-GET /health → Health check
-GET /db → Database test
-GET /metrics → Prometheus metrics
-Observability Features
-request_id middleware
-request latency tracking
-structured logging
-4.3 PostgreSQL (Data Layer)
-Role
-Persistent storage
-Internal-only service
-Security Model
-Not exposed externally
-Accessible only via Docker network
-4.4 Prometheus (Metrics Layer)
-Role
-Scrapes metrics from Flask API
-Collects system observability data
-Target
-/metrics endpoint
-4.5 Grafana (Visualization Layer)
-Role
-Dashboard visualization
-Metrics exploration
-System monitoring
-Status
-Deployed
-Dashboards: pending refinement
-5. Data Flow
-5.1 Request Flow
-Client → Nginx → Flask API → PostgreSQL → Response
-5.2 Metrics Flow
-Flask API → Prometheus → Grafana
-6. Network Design
+### 2.3. Persistence Layer (PostgreSQL)
+* **Role:** Relational database management.
+* **Version:** PostgreSQL 16.
+* **Security:** Operates entirely within the Docker overlay network. Port `5432` is not bound to the host machine, preventing direct external database connections.
 
-All services run inside Docker network:
+### 2.4. Git & CI/CD Infrastructure (Hub-and-Spoke)
+* **Local GitLab (Port 8929):** Acts as the localized Git server to ensure development continuity even during external network outages.
+* **GitLab Runner:** Bound to the host machine's `/var/run/docker.sock`. It intercepts pushes to the `production` branch, parses `.gitlab-ci.yml`, and orchestrates build/deploy processes dynamically.
+* **Repository Mirroring:** Asynchronously syncs the local codebase to the central GitHub repository (Single Source of Truth).
 
-app_network
-Internal Communication
-nginx → python_api:5000
-api → db:5432
-7. Key Design Decisions
-7.1 Reverse Proxy Isolation
+---
 
-Only Nginx is exposed externally.
+## 3. The Observability Stack (O11y)
 
-Reason:
+Monitoring is treated as a first-class citizen, ensuring complete visibility into logs, metrics, and alerts.
 
-Security boundary
-Traffic control
-Scalability foundation
-7.2 Database Isolation
+1.  **Grafana Alloy (Unified Collector):** Replaces traditional agents (like Promtail). It binds to the Docker socket to dynamically discover containers, collect logs, parse JSON structures, and forward them to Loki.
+2.  **Prometheus (Metrics Hub):** Periodically scrapes numeric metrics from:
+    * Flask API (`/metrics` via client library).
+    * Node Exporter (Host CPU, RAM, Disk).
+    * Postgres Exporter (Database performance).
+3.  **Grafana Loki (Log Aggregation):** Receives and indexes high-volume, structured logs from Alloy.
+4.  **Alertmanager:** Subscribes to Prometheus alert rules (`alerts.yml`). Evaluates states like "High CPU Usage" or "API Down" and dispatches critical alerts to a Telegram Bot via Webhook.
+5.  **Grafana (Visualization):** The unified dashboard UI, pre-provisioned to connect seamlessly with both Prometheus and Loki data sources.
 
-PostgreSQL is not publicly exposed.
+---
 
-Reason:
+## 4. Infrastructure as Code (IaC)
 
-Prevent direct access
-Enforce service-layer access
-7.3 Observability First Design
+Provisioning is strictly automated to eliminate configuration drift:
+* **Ansible:** Manages the entire lifecycle of the server setup.
+    * `setup-server.yml`: Prepares the host, installs Docker/Git, and configures UFW firewall rules.
+    * `deploy-app.yml`: Clones the repository, enforces file permissions (specifically UID 65534 for Prometheus and 10001 for Loki), and spins up the Docker Compose stack.
 
-Metrics are built into API from early stage.
+---
 
-Includes:
+## 5. Network Flow & Port Mapping
 
-Request duration
-Request identity
-Structured logs
-8. Known Issues & Incidents
-8.1 Nginx Misconfiguration Incident (Critical)
-Problem
+To understand how traffic moves through the system, reference this port matrix:
 
-Invalid nginx configuration caused container restart loop.
+| Service | Internal Port | Host (Exposed) Port | Accessibility |
+| :--- | :--- | :--- | :--- |
+| **Nginx (Proxy)** | 80 | `80` | Public / Gateway |
+| **GitLab (Web/Git)** | 80 / 22 | `8929` / `2222` | Local LAN |
+| **Grafana** | 3000 | `3000` | Local LAN (Admin) |
+| **Prometheus** | 9090 | `9090` | Local LAN (Admin) |
+| **Alertmanager** | 9093 | `9093` | Local LAN (Admin) |
+| **Flask API** | 5000 | `None` | Internal Network Only |
+| **PostgreSQL** | 5432 | `None` | Internal Network Only |
+| **Loki** | 3100 | `None` | Internal Network Only |
+| **Grafana Alloy** | 12345 | `None` | Internal Network Only |
 
-Error
-server directive is not allowed here
-Root Cause
+---
 
-Server block placed in wrong configuration file.
+## 6. Security & DevSecOps Posture
 
-Fix
+1.  **Least Privilege Execution:** Observability tools (Prometheus, Loki) run as unprivileged non-root users.
+2.  **Secret Management:** Database credentials, Telegram bot tokens, and API keys are injected via a `.env` file at runtime and are strictly ignored by `.gitignore`.
+3.  **Socket Protection:** The Docker socket is mounted *only* to the GitLab Runner and Grafana Alloy, both of which require it for orchestration and log discovery, respectively.
 
-Move configuration to:
-
-nginx/conf.d/default.conf
-8.2 Middleware Failure Incident (Critical)
-Problem
-request_id missing
-start_time missing
-HTTP 500 errors
-Root Cause
-
-Middleware not properly initialized in request lifecycle
-
-Fix
-
-Incremental restoration (no full rewrite)
-
-9. Scalability Considerations
-Current Limitations
-Single API instance
-No load balancing
-No horizontal scaling
-Future Improvements
-Kubernetes deployment
-API replicas behind Nginx
-Redis caching layer
-10. Observability Strategy
-Current Stack
-Prometheus (metrics)
-Grafana (dashboards)
-Flask /metrics
-Planned Extensions
-Alertmanager (alerts)
-Loki (logs aggregation)
-OpenTelemetry (tracing)
-11. Security Model
-Only Nginx exposed externally
-Database internal-only
-No secrets stored in repository
-.gitignore enforced
-12. System Philosophy
-
-This system is designed with:
-
-Simplicity first
-Observability by default
-Failure transparency
-Incremental evolution (no big rewrites)
-13. Dependency Graph
-Nginx
-  ↓
-Flask API
-  ↓
-PostgreSQL
-Flask API
-  ↓
-Prometheus
-  ↓
-Grafana
-14. Summary
-
-This architecture simulates a real production environment:
-
-Reverse proxy layer (Nginx)
-Application layer (Flask)
-Data layer (PostgreSQL)
-Observability stack (Prometheus + Grafana
-
-15. 
-Windows
-│
-├── Docker Desktop
-│     │
-│     ├── Registry Mirror
-│     │
-│     └── WSL2 Integration
-│
-└── Ubuntu (WSL2)
-      │
-      └── python-api-docker
-            │
-            ├── Flask API
-            ├── PostgreSQL
-            ├── Nginx
-            ├── Prometheus
-            └── Grafana

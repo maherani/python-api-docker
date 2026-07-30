@@ -1,176 +1,69 @@
-PROJECT STATE
+# PROJECT STATE
+**Last Updated:** 2026-07-29
+**Project:** python-api-docker
+**Status:** Production-Grade SRE & Observability Environment
 
-Last Updated: 2026-06-28
-Project: python-api-docker
-Status: Production-like Observability System (Learning Environment)
+## 1. Project Objective
+This project is engineered as a production-like system designed to practice real-world DevOps, Site Reliability Engineering (SRE), and Infrastructure as Code (IaC) concepts. 
+Primary goals include building a resilient Hub-and-Spoke Git workflow, managing containerized microservices, enforcing configuration management with Ansible, and maintaining a robust observability pipeline.
 
-1. Project Objective
+## 2. Current System Architecture
+[cite_start]The system follows a strict decoupled architecture to enforce security boundaries and scalability[cite: 257, 258]:
 
-This project is a production-like system designed to practice real-world DevOps and SRE concepts.
+* [cite_start]**Git Workflow:** Hub-and-Spoke architecture (Local GitLab syncing to Central GitHub via Repository Mirroring)[cite: 205, 208].
+* [cite_start]**CI/CD:** Local GitLab Runner bound to the host `docker.sock` for automated deployments[cite: 218].
+* [cite_start]**Edge Layer:** Nginx acting as a reverse proxy with IP-based rate limiting (10 requests/second) on port 80[cite: 254, 280].
+* [cite_start]**Application Layer:** Replicated Flask API running on internal port 5000[cite: 254, 275].
+* [cite_start]**Data Tier:** Isolated PostgreSQL 16 database operating securely within the internal Docker network on port 5432[cite: 257, 275].
 
-It includes:
+## 3. Observability Matrix
+[cite_start]An "Observability-First" design is deeply integrated into the system, avoiding post-deployment monitoring patches[cite: 259]:
 
-Docker & Docker Compose
-Flask API development
-PostgreSQL database
-Nginx reverse proxy
-Prometheus metrics collection
-Grafana dashboards
-Logging & monitoring
-Observability fundamentals (SRE)
-Primary Goal
+* [cite_start]**Grafana Alloy:** Replaces older agents to act as a unified collector, processing logs and telemetry from the Docker socket[cite: 160, 278].
+* [cite_start]**Prometheus & Exporters:** Scrapes metrics actively from the Flask API (`/metrics`), `node-exporter` (hardware), and `postgres-exporter`[cite: 251, 278, 279].
+* [cite_start]**Grafana Loki:** Receives structured JSON logs directly from Alloy for aggregation and querying[cite: 277, 278].
+* [cite_start]**Alertmanager:** Evaluates critical thresholds (e.g., API replicas down, High CPU, DB down) and routes alerts to a Telegram Bot[cite: 231, 267, 268, 270].
+* [cite_start]**Grafana:** Visualizes the complete stack using pre-provisioned data sources[cite: 277].
 
-Build a fully documented system that:
+## 4. Implemented Components & API Endpoints
 
-Can be understood without prior context
-Can be rebuilt from documentation alone
-Mimics real production observability pipelines
-2. Current System Architecture
-Client
-  ↓
-Nginx (Reverse Proxy - Port 80)
-  ↓
-Flask API (Port 5000)
-  ↓
-PostgreSQL
-3. Observability Architecture
-Flask API → Custom Metrics (/metrics) → Prometheus → Grafana Dashboards
-4. Implemented Components
-4.1 Flask API
-Endpoints
-GET / → Root health response
-GET /health → Service status check
-GET /db → Database connectivity test
-GET /metrics → Prometheus metrics endpoint
-Observability Features
-Request ID middleware
-Request latency tracking
-Structured JSON logging
-Custom metrics (request rate, latency, errors)
-Endpoint-level monitoring
-4.2 PostgreSQL
-Implementation
-PostgreSQL container (Dockerized)
-Internal Docker networking
-Health checks enabled
-Connected to Flask API via /db
-Status
-Running
-Healthy
-4.3 Nginx
-Role
-Reverse proxy (entry point)
-Routes traffic to Flask API
-Status
-Stable and production-like
-4.4 Monitoring Stack
-Components
-Prometheus (metrics collection)
-Grafana (visual dashboards)
-Flask /metrics exporter
-Metrics Available
-Request count
-Request rate
-Latency (response time)
-Error rate
-Endpoint-level traffic
-Status
-Prometheus: Running
-Grafana: Running
-Metrics: Active and scraping
-5. System Status Overview
-Component    | Status
------------- | -------------
-API          | Running (Verified on Port 5000)
-Database     | Healthy (Verified connectivity)
-Nginx        | Stable (Using default baseline configuration)
-Prometheus   | Running & Actively Scraping
-Grafana      | Running & Connected to Prometheus Data Source (Verified)
-Metrics      | Active (Custom metrics like http_requests_total verified via load test)
-6. Known Issues
-/db endpoint occasionally unstable (rare)
-Middleware sensitive to structural changes
-Needs stronger global exception handling
+| Endpoint | Method | Purpose |
+| :--- | :--- | :--- |
+| `/` | `GET` | [cite_start]Root confirmation and latency check[cite: 239]. |
+| `/health` | `GET` | [cite_start]Infrastructure validation layer[cite: 240]. |
+| `/db` | `GET` | [cite_start]Structural upstream database connection test[cite: 240]. |
+| `/users` | `POST` | [cite_start]Creates a new user record in the database via JSON[cite: 239]. |
+| `/slow` | `GET` | [cite_start]Simulates a 3-second downstream resource starvation[cite: 240]. |
+| `/error` | `GET` | [cite_start]Simulates standard HTTP 500 server exception[cite: 241]. |
+| `/metrics` | `GET` | [cite_start]Exposes Prometheus telemetry records[cite: 241]. |
 
-7. Major Lessons Learned
-7.1 Middleware Design
+## 5. System Status Overview
 
-Improper middleware ordering causes:
+| Component | Status | Verification Method |
+| :--- | :--- | :--- |
+| **API** | Stable | [cite_start]Returns active HTTP 200 on `/health` and `/`[cite: 239, 240]. |
+| **Database** | Stable | [cite_start]PostgreSQL accepts internal overlay connections[cite: 257]. |
+| **Nginx** | Active | [cite_start]Routes traffic to API and applies rate limits[cite: 254, 280]. |
+| **Prometheus** | Scraping | [cite_start]Collecting from `app`, `node-exporter`, and `postgres-exporter`[cite: 251]. |
+| **Alertmanager** | Active | [cite_start]Telegram routing configured and ready[cite: 231]. |
+| **Ansible (IaC)** | Provisioned | [cite_start]Server setup playbooks validated[cite: 264]. |
 
-missing request_id
-broken request lifecycle
-HTTP 500 errors
+## 6. Major Lessons Learned & Technical Debt
 
-Rule:
-Never refactor Flask core in a single step.
+* [cite_start]**Permission Denied Faults:** Prometheus (UID 65534) and Loki (UID 10001) execute under unprivileged security profiles[cite: 195]. [cite_start]Volume mappings require explicit host-level ownership adjustments via Ansible or manual `chown`[cite: 196].
+* [cite_start]**Network Interruptions (WSL2):** Dynamic network interruptions in Windows 11 cause Docker Hub pulling failures[cite: 188]. [cite_start]Remediation requires mapping virtual network configurations via `.wslconfig`[cite: 189, 192].
+* [cite_start]**Middleware Design:** Improper middleware ordering causes missing `request_id` and broken request lifecycles (HTTP 500 errors)[cite: 262].
+* [cite_start]**Dependency Management:** Deploying without version pinning in `requirements.txt` introduces severe instability[cite: 126]. [cite_start]Exact versions must always be locked[cite: 127].
 
-7.2 Nginx Configuration
+## 7. Next Steps (System Evolution)
+The system has achieved a highly observable state with IaC foundations. Suggested next phases:
+* Implement Trivy for automated Docker image vulnerability scanning (SecOps integration).
+* Implement Bandit for Python static application security testing (SAST).
+* Explore horizontal scaling with Kubernetes orchestration.
+* Establish secure Secrets Management (e.g., HashiCorp Vault) to replace `.env` file dependencies.
 
-Incorrect structure causes container crash loops.
-
-Rule:
-Use:
-
-nginx/conf.d/default.conf
-7.3 Observability Principle
-
-Metrics must evolve alongside the API, not after it.
-
-7.4 Secrets Handling
-
-Never commit sensitive data (tokens, keys, credentials).
-
-7.5 Prometheus Scraping Behavior:** Changes in application endpoints (like `/db`) aren't reflected instantly; they adhere to the defined `scrape_interval` (5s).
-
-7.6 Metric Typology:** Standard container health metrics (`up`) only show binary status (0 or 1), whereas custom counters (`http_requests_total`) are required to track actual traffic behavior.
-8. Technical Debt
-Improve /db robustness
-Add global exception handler
-Standardize logging format
-Strengthen middleware reliability
-9. Future Enhancements
-Alertmanager integration (alerting layer)
-Loki logging stack
-OpenTelemetry tracing
-CI/CD with GitHub Actions
-Kubernetes deployment
-Blue/Green deployment strategy
-Automated backups
-10. Next Step (System Evolution)
-
-The system is now in a fully observable state.
-
-Next phase:
-
-Alerting + Advanced Dashboards
-
-Suggested direction:
-
-Grafana dashboards (latency / error rate / request rate)
-Alert rules (Prometheus Alertmanager)
-SLO / SLI definition
-11. Documentation Rule
-
-This file is the single source of truth.
-
-Always check before changes:
-
-PROJECT_STATE.md
-ARCHITECHURE.md
-RUNBOOK.md
-
-
-12. Current Known Good State
-
-Windows 11
-Docker Desktop
-WSL2 Ubuntu
-Docker Compose v2
-Registry Mirror configured
-All containers running successfully
-
-13. Major Lessons Learned
-
-Docker Hub access may fail because of DNS/routing restrictions.
-Docker Registry Mirror can completely eliminate Docker Hub connectivity issues without modifying project files.
-Windows + WSL2 provides a stable development environment for the project.
+## 8. Documentation Rule
+This file is the single source of truth. Always check before changes:
+1. `PROJECT_STATE.md`
+2. `ARCHITECTURE.md`
+3. `RUNBOOK.md`
