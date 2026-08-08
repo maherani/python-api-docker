@@ -12,11 +12,19 @@
         state: directory
         mode: '0755'
 
-    - name: Copy all project files to the server
-      copy:
-        src: "{{ playbook_dir }}/../"
-        dest: "{{ dest_dir }}/"
-        mode: preserve
+    - name: Copy project files to production directory (excluding unnecessary files)
+      ansible.builtin.synchronize:
+        src: "{{ playbook_dir }}/../"  # Source path of the project on the local machine/runner
+        dest: "/opt/python-api-docker"
+        delete: yes                    # Remove outdated files from the destination directory
+        exclude:
+          - ".git"
+          - ".github"
+          - "docs"
+          - "*.md"
+          - "tree.txt"
+          - "ansible"
+      delegate_to: localhost          # Run the synchronization task from the runner/localhost
 
     - name: Set correct permissions for Prometheus data
       file:
