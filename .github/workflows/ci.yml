@@ -73,7 +73,19 @@ jobs:
     - name: Sync Code to /opt and Set Permissions
       run: |
         sudo mkdir -p /opt/python-api-docker
-        sudo cp -a . /opt/python-api-docker/
+        sudo mkdir -p /opt/python-api-docker
+        # Synchronize files to the target directory and exclude unnecessary files
+        sudo rsync -a --delete \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='docs' \
+            --exclude='*.md' \
+            --exclude='tree.txt' \
+            --exclude='ansible' \
+            --exclude='grafana_data' \
+            --exclude='loki_data' \
+            --exclude='prometheus_data' \
+            ./ /opt/python-api-docker/
         cd /opt/python-api-docker
 
         # Create data directories for monitoring tools
