@@ -73,7 +73,7 @@ jobs:
     - name: Sync Code to /opt and Set Permissions
       run: |
         sudo mkdir -p /opt/python-api-docker
-        sudo cp -a . /opt/python-api-docker/
+#        sudo cp -a . /opt/python-api-docker/
         cd /opt/python-api-docker
 
         # Create data directories for monitoring tools
