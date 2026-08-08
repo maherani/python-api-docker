@@ -11,24 +11,23 @@
         path: "{{ dest_dir }}"
         state: directory
         mode: '0755'
-
-    # Synchronize project files to the production directory while excluding unnecessary files
+   # Synchronize project files to the production directory while excluding unnecessary files
     - name: Copy project files to production securely
       ansible.builtin.synchronize:
         src: "{{ playbook_dir }}/../"  # Path to the local project root directory
         dest: "/opt/python-api-docker" # Destination path on the target server
         delete: yes                    # Remove extraneous files from destination
         recursive: yes                 # Copy directories recursively
-        rsync_opts:
-          - "--exclude=.git"
-          - "--exclude=.github"
-          - "--exclude=docs"
-          - "--exclude=*.md"
-          - "--exclude=tree.txt"
-          - "--exclude=ansible"
-          - "--exclude=grafana_data"
-          - "--exclude=loki_data"
-          - "--exclude=prometheus_data"
+        exclude:                       # Native Ansible exclude list for cleaner rsync pattern matching
+          - ".git"
+          - ".github"
+          - "docs"
+          - "*.md"
+          - "tree.txt"
+          - "ansible"
+          - "grafana_data"
+          - "loki_data"
+          - "prometheus_data"
       delegate_to: localhost          # Run synchronization locally from the runner
 
     - name: Set correct permissions for Prometheus data
